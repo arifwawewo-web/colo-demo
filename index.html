@@ -71,17 +71,22 @@ input{padding:14px;font-size:1.1rem;border-radius:8px;border:2px solid var(--gol
 </div>
 
 <div id="s-host-game" class="screen">
-  <div id="h-question" style="display:none;width:100%;">
+  <div id="h-duel" style="display:none;width:100%;">
     <div id="h-qnum" style="color:var(--gold)"></div>
     <div class="timerbar"><div id="h-timerfill" class="timerfill"></div></div>
+    <div style="display:flex;justify-content:space-around;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div><div style="color:var(--gold)">RAJA</div><div id="h-king-name" style="font-size:1.6rem;font-family:Georgia,serif;"></div><div id="h-king-score" style="font-size:2rem;color:var(--gold);"></div></div>
+      <div style="font-size:1.8rem;">VS</div>
+      <div><div style="color:var(--red)">PENANTANG</div><div id="h-chal-name" style="font-size:1.6rem;font-family:Georgia,serif;"></div><div id="h-chal-score" style="font-size:2rem;color:var(--red);"></div></div>
+    </div>
     <div id="h-qtext" class="qtext"></div>
-    <div id="h-opts" class="opts"></div>
-    <div id="h-answered" class="small"></div>
+    <div id="h-opts" class="opts" style="max-width:700px;margin:0 auto;"></div>
+    <div id="h-queue-next" class="small"></div>
   </div>
   <div id="h-reveal" style="display:none;">
     <h2 id="h-correct" style="color:#27ae60;"></h2>
-    <div id="h-tally" class="lead"></div>
-    <button class="btn" onclick="hostNext()">LANJUT ➡️</button>
+    <h2 id="h-winner" style="color:var(--gold);"></h2>
+    <button class="btn" onclick="hostNextDuel()">LANJUT ➡️</button>
   </div>
   <div id="h-podium" style="display:none;">
     <h1 style="color:var(--gold)">🏆 JUARA ARENA 🏆</h1>
@@ -100,7 +105,7 @@ input{padding:14px;font-size:1.1rem;border-radius:8px;border:2px solid var(--gol
       <button class="opt o3" onclick="answer(3)">⬛</button>
     </div>
   </div>
-  <div id="p-waiting-reveal" style="display:none;"><h2>⏳ Menunggu pemain lain...</h2></div>
+  <div id="p-waiting-reveal" style="display:none;"><h2 id="p-wait-text">⏳ Menunggu...</h2></div>
   <div id="p-reveal" style="display:none;">
     <h1 id="p-result"></h1>
     <p id="p-score2"></p>
@@ -115,7 +120,7 @@ input{padding:14px;font-size:1.1rem;border-radius:8px;border:2px solid var(--gol
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
   getFirestore, doc, setDoc, getDoc, updateDoc,
-  onSnapshot, collection, getDocs
+  onSnapshot, collection, getDocs, increment
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // ====== CONFIG FIREBASE KAMU ======
@@ -172,7 +177,7 @@ const TIME_LIMIT = 15000;
 const MAX_PLAYERS = 15;
 
 let myRole, myRoomCode, myId, myName='', myScore=0;
-let lastPhase=null, lastQIndex=-1, timerInt=null, revealing=false, answeredThisQ=-1;
+let lastPhase=null, lastQIndex=-1, lastKing=null, timerInt=null, revealing=false;
 let activeUnsubs = [];
 
 function show(id){
@@ -223,29 +228,40 @@ async function createRoom(){
   activeUnsubs.push(unsub2);
 }
 
+function nameOf(players,id){ const p=players.find(x=>x.id===id); return p?p.name:'???'; }
+function scoreOf(players,id){ const p=players.find(x=>x.id===id); return p?(p.score||0):0; }
+
 function renderHost(){
   const g = window.__game || {phase:'lobby'};
   const players = window.__players || [];
   if(g.phase==='lobby'){
     document.getElementById('h-count').innerText = players.length+' / '+MAX_PLAYERS+' peserta bergabung';
     document.getElementById('h-players').innerHTML = players.map(p=>`<div><span>${p.name}</span></div>`).join('');
-    document.getElementById('h-start-btn').disabled = players.length===0;
+    document.getElementById('h-start-btn').disabled = players.length<2;
     return;
   }
   show('s-host-game');
-  if(g.phase!==lastPhase || g.qIndex!==lastQIndex){ lastPhase=g.phase; lastQIndex=g.qIndex; clearInterval(timerInt); timerInt=null; revealing=false; }
-  document.getElementById('h-question').style.display = g.phase==='question'?'block':'none';
+  if(g.phase!==lastPhase || g.qIndex!==lastQIndex || g.king!==lastKing){
+    lastPhase=g.phase; lastQIndex=g.qIndex; lastKing=g.king; clearInterval(timerInt); timerInt=null; revealing=false;
+  }
+  document.getElementById('h-duel').style.display = g.phase==='dueling'?'block':'none';
   document.getElementById('h-reveal').style.display = g.phase==='reveal'?'block':'none';
   document.getElementById('h-podium').style.display = g.phase==='podium'?'block':'none';
 
-  if(g.phase==='question'){
-    const q=QUESTIONS[g.qIndex];
-    document.getElementById('h-qnum').innerText = `Soal ${g.qIndex+1} / ${QUESTIONS.length}`;
-    document.getElementById('h-qtext').innerText = q.q;
+  if(g.phase==='dueling' || g.phase==='reveal'){
+    const chalId = g.queue[0];
+    document.getElementById('h-king-name').innerText = nameOf(players,g.king);
+    document.getElementById('h-king-score').innerText = scoreOf(players,g.king)+' pt';
+    document.getElementById('h-chal-name').innerText = nameOf(players,chalId);
+    document.getElementById('h-chal-score').innerText = scoreOf(players,chalId)+' pt';
+  }
+  if(g.phase==='dueling'){
+    document.getElementById('h-qnum').innerText = `Ronde ${g.currentRound}/${g.maxRounds} — Duel ${g.duelCount+1}`;
+    document.getElementById('h-qtext').innerText = QUESTIONS[g.qIndex].q;
     const opts = getOptions(g.qIndex);
     document.getElementById('h-opts').innerHTML = opts.map((o,i)=>`<div class="opt o${i}">${o}</div>`).join('');
-    const answeredCount = players.filter(p=>p.currentAnswer && p.currentAnswer.qIndex===g.qIndex).length;
-    document.getElementById('h-answered').innerText = `${answeredCount}/${players.length} sudah jawab`;
+    const upcoming = g.queue.slice(1).map(id=>nameOf(players,id));
+    document.getElementById('h-queue-next').innerText = upcoming.length ? 'Antrean: '+upcoming.join(' → ') : 'Duel terakhir di antrean';
     if(!timerInt){
       const tick=()=>{
         const left = Math.max(0, g.timeLimit-(Date.now()-g.startAt));
@@ -254,13 +270,16 @@ function renderHost(){
       tick();
       timerInt=setInterval(tick,300);
     }
+    resolveDuelIfNeeded(g);
   }
   if(g.phase==='reveal'){
     const ci = correctIndex(g.qIndex);
     document.getElementById('h-correct').innerText = `Jawaban benar: ${getOptions(g.qIndex)[ci]}`;
-    const tally=[0,0,0,0];
-    players.forEach(p=>{ if(p.currentAnswer && p.currentAnswer.qIndex===g.qIndex) tally[p.currentAnswer.choice]++; });
-    document.getElementById('h-tally').innerHTML = tally.map((n,i)=>`<div><span>Opsi ${i+1}</span><span>${n} suara</span></div>`).join('');
+    const chalId = g.queue[0];
+    let winText = 'SERI — dua-duanya salah / waktu habis';
+    if(g.winnerSide==='king') winText = `👑 ${nameOf(players,g.king)} BERTAHAN!`;
+    else if(g.winnerSide==='chal') winText = `⚔️ ${nameOf(players,chalId)} MEREBUT TAHTA!`;
+    document.getElementById('h-winner').innerText = winText;
   }
   if(g.phase==='podium'){
     const sorted=[...players].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,5);
@@ -269,20 +288,52 @@ function renderHost(){
 }
 
 async function startGame(){
-  await setDoc(roomDoc(myRoomCode), {phase:'question', qIndex:0, startAt:Date.now(), timeLimit:TIME_LIMIT});
+  const players = window.__players || [];
+  const ids = players.map(p=>p.id);
+  const kIdx = Math.floor(Math.random()*ids.length);
+  const king = ids[kIdx];
+  const queue = ids.filter((id,i)=>i!==kIdx).sort(()=>Math.random()-0.5);
+  await setDoc(roomDoc(myRoomCode), {
+    phase:'dueling', king, queue, currentRound:1, maxRounds:3, duelCount:0,
+    qIndex: Math.floor(Math.random()*QUESTIONS.length),
+    startAt: Date.now(), timeLimit: TIME_LIMIT,
+    duelAnswers:{king:null,chal:null}, winnerSide:null
+  });
 }
-async function hostNext(){
+
+async function hostNextDuel(){
   const g = window.__game;
-  const next = (g.qIndex||0)+1;
-  if(next>=QUESTIONS.length) await setDoc(roomDoc(myRoomCode), {phase:'podium'});
-  else await setDoc(roomDoc(myRoomCode), {phase:'question', qIndex:next, startAt:Date.now(), timeLimit:TIME_LIMIT});
+  let { king, queue, currentRound, maxRounds, duelCount } = g;
+  if(g.winnerSide==='chal'){ const oldKing=king; king=queue[0]; queue=queue.slice(1).concat(oldKing); }
+  else { queue = queue.slice(1).concat(queue[0]); }
+  duelCount++;
+  if(duelCount>=queue.length){ duelCount=0; currentRound++; }
+  if(currentRound>maxRounds){ await setDoc(roomDoc(myRoomCode), {phase:'podium'}); return; }
+  await setDoc(roomDoc(myRoomCode), {
+    phase:'dueling', king, queue, currentRound, maxRounds, duelCount,
+    qIndex: Math.floor(Math.random()*QUESTIONS.length),
+    startAt: Date.now(), timeLimit: TIME_LIMIT,
+    duelAnswers:{king:null,chal:null}, winnerSide:null
+  });
 }
-setInterval(async ()=>{
-  const g = window.__game;
-  if(myRole==='host' && myRoomCode && g && g.phase==='question' && !revealing){
-    if(Date.now()-g.startAt >= g.timeLimit){ revealing=true; await setDoc(roomDoc(myRoomCode), {...g, phase:'reveal'}); }
+
+async function resolveDuelIfNeeded(g){
+  if(g.phase!=='dueling' || revealing) return;
+  const ka = g.duelAnswers && g.duelAnswers.king;
+  const ca = g.duelAnswers && g.duelAnswers.chal;
+  let winnerSide;
+  if(ka && ka.correct && ca && ca.correct) winnerSide = ka.at<=ca.at ? 'king':'chal';
+  else if(ka && ka.correct) winnerSide = 'king';
+  else if(ca && ca.correct) winnerSide = 'chal';
+  else if(Date.now()-g.startAt >= g.timeLimit) winnerSide = null;
+  else return;
+  revealing = true;
+  if(winnerSide){
+    const winnerId = winnerSide==='king' ? g.king : g.queue[0];
+    await updateDoc(playerDoc(myRoomCode, winnerId), {score: increment(10)});
   }
-},1000);
+  await setDoc(roomDoc(myRoomCode), {...g, phase:'reveal', winnerSide});
+}
 
 async function joinGame(){
   const code = document.getElementById('roomcode-input').value.trim();
@@ -301,7 +352,7 @@ async function joinGame(){
   myRoomCode = code;
   myId = genId();
   myScore = 0;
-  await setDoc(playerDoc(myRoomCode, myId), {name:myName, score:0, currentAnswer:null, joinedAt:Date.now()});
+  await setDoc(playerDoc(myRoomCode, myId), {name:myName, score:0, joinedAt:Date.now()});
   show('s-player');
 
   const unsub = onSnapshot(roomDoc(myRoomCode), snap=>{
@@ -309,24 +360,48 @@ async function joinGame(){
     renderPlayer();
   });
   activeUnsubs.push(unsub);
+  // Skor di-update oleh host (lewat increment()), jadi kita dengerin dokumen kita sendiri biar sinkron
+  const unsubMe = onSnapshot(playerDoc(myRoomCode, myId), snap=>{
+    if(snap.exists()) myScore = snap.data().score || 0;
+    renderPlayer();
+  });
+  activeUnsubs.push(unsubMe);
 }
 
 function renderPlayer(){
   const g = window.__game || {phase:'lobby'};
-  document.getElementById('p-wait').style.display = g.phase==='lobby'?'block':'none';
-  document.getElementById('p-question').style.display = (g.phase==='question' && answeredThisQ!==g.qIndex)?'block':'none';
-  document.getElementById('p-waiting-reveal').style.display = (g.phase==='question' && answeredThisQ===g.qIndex)?'block':'none';
-  document.getElementById('p-reveal').style.display = g.phase==='reveal'?'block':'none';
-  document.getElementById('p-podium').style.display = g.phase==='podium'?'block':'none';
-  if(g.phase==='question'){
-    document.getElementById('p-score').innerText = myName+' · '+myScore+' poin';
-    document.querySelectorAll('#p-question .opt').forEach(b=>b.disabled=false);
+  const amKing = g.king===myId;
+  const amChal = g.queue && g.queue[0]===myId;
+  const inDuel = amKing || amChal;
+  const mySide = amKing ? 'king' : (amChal ? 'chal' : null);
+  const myAnswer = mySide && g.duelAnswers ? g.duelAnswers[mySide] : null;
+
+  document.getElementById('p-wait').style.display = g.phase==='lobby' ? 'block':'none';
+  document.getElementById('p-question').style.display = (g.phase==='dueling' && inDuel && !myAnswer) ? 'block':'none';
+  document.getElementById('p-waiting-reveal').style.display = (g.phase==='dueling' && (!inDuel || myAnswer)) ? 'block':'none';
+  document.getElementById('p-reveal').style.display = g.phase==='reveal' ? 'block':'none';
+  document.getElementById('p-podium').style.display = g.phase==='podium' ? 'block':'none';
+
+  if(g.phase==='dueling'){
+    if(inDuel && !myAnswer){
+      document.getElementById('p-score').innerText = myName+' · '+myScore+' poin';
+      document.querySelectorAll('#p-question .opt').forEach(b=>b.disabled=false);
+    } else if(myAnswer){
+      document.getElementById('p-wait-text').innerText = '⏳ Jawaban terkirim, menunggu hasil...';
+    } else {
+      document.getElementById('p-wait-text').innerText = '⏳ Sedang bertarung: Raja VS Penantang. Giliranmu belum tiba, pantengin layar!';
+    }
   }
   if(g.phase==='reveal'){
-    const correct = answeredThisQ===g.qIndex ? window.__lastCorrect : false;
     const el = document.getElementById('p-result');
-    el.innerText = correct? '✅ BENAR! +10' : '❌ SALAH';
-    el.style.color = correct? '#27ae60':'#e74c3c';
+    if(inDuel){
+      const won = g.winnerSide===mySide;
+      el.innerText = won ? '✅ MENANG! +10' : (g.winnerSide===null ? '➖ SERI' : '❌ KALAH');
+      el.style.color = won ? '#27ae60' : (g.winnerSide===null ? '#f1c40f' : '#e74c3c');
+    } else {
+      el.innerText = '⚔️ Duel selesai';
+      el.style.color = '#fff';
+    }
     document.getElementById('p-score2').innerText = 'Total skor: '+myScore;
   }
   if(g.phase==='podium'){
@@ -336,15 +411,12 @@ function renderPlayer(){
 
 async function answer(choice){
   const g = window.__game;
-  const qi = g.qIndex;
-  const opts = getOptions(qi);
-  const correct = (opts[choice] === QUESTIONS[qi].a);
-  window.__lastCorrect = correct;
-  if(correct) myScore += 10;
-  answeredThisQ = qi;
+  const mySide = (g.king===myId) ? 'king' : 'chal';
+  const opts = getOptions(g.qIndex);
+  const correct = (opts[choice] === QUESTIONS[g.qIndex].a);
   document.querySelectorAll('#p-question .opt').forEach(b=>b.disabled=true);
   renderPlayer();
-  await updateDoc(playerDoc(myRoomCode, myId), {score: myScore, currentAnswer:{qIndex:qi, choice, correct}});
+  await updateDoc(roomDoc(myRoomCode), { ['duelAnswers.'+mySide]: {choice, correct, at: Date.now()} });
 }
 
 // Wajib: script type="module" gak otomatis taruh fungsi ke window,
@@ -353,7 +425,7 @@ window.goHome = goHome;
 window.chooseRole = chooseRole;
 window.createRoom = createRoom;
 window.startGame = startGame;
-window.hostNext = hostNext;
+window.hostNextDuel = hostNextDuel;
 window.joinGame = joinGame;
 window.answer = answer;
 </script>
