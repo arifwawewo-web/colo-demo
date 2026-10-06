@@ -91,6 +91,31 @@
     </div>
   </main>
 
+  <main id="screen-roulette" class="screen hidden">
+    <h1 class="brand-title title-glow">ROULETTE TAKDIR</h1>
+    <p class="subtitle">Siapa yang akan menjadi Raja Colosseum?</p>
+    <div class="roulette-stage">
+      <div class="roulette-pointer">▼</div>
+      <div id="roulette-strip" class="roulette-strip"></div>
+    </div>
+    <div id="roulette-result" class="roulette-result">MENGACAK...</div>
+  </main>
+
+  <main id="screen-briefing" class="screen hidden">
+    <h1 class="brand-title" style="font-size:3rem">TAKDIR TELAH DITENTUKAN</h1>
+    <div class="briefing-panel stone-panel">
+      <div class="briefing-duel">
+        <div><div class="brief-role king-text">👑 RAJA</div><div id="brief-king" class="brief-name">-</div></div>
+        <div class="brief-vs">VS</div>
+        <div><div class="brief-role chal-text">⚔️ PENANTANG PERTAMA</div><div id="brief-chal" class="brief-name">-</div></div>
+      </div>
+      <div class="brief-queue-title">URUTAN ANTREAN PENANTANG</div>
+      <div id="brief-queue" class="brief-queue"></div>
+      <div id="brief-status" class="status-text">Menunggu...</div>
+      <button id="btn-start-duel" class="btn-action">MULAI DUEL ⚔️</button>
+    </div>
+  </main>
+
   <main id="screen-battle" class="screen hidden">
     <button id="btn-pause" class="btn-pause">⏸ JEDA</button>
     <div class="host-badge" id="host-badge">HOST • ROOM ------</div>
