@@ -1,495 +1,161 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Colosseum Kuis - Demo Live</title>
-
-<style>
-:root{--gold:#ffcf40;--bg:#0a0a12;--red:#e74c3c;--blue:#3498db;--yellow:#f1c40f;--green:#27ae60;color-scheme:dark;}
-*{box-sizing:border-box;}
-html,body{margin:0;height:100%;}
-body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:#fff;
-  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
-h1,h2{font-family:Georgia,serif;margin:.3em 0;}
-.screen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
-.screen.active{display:flex;}
-.btn{background:linear-gradient(135deg,#c0392b,#8e0000);color:#fff;border:none;padding:16px 28px;
-  font-size:1.1rem;border-radius:10px;cursor:pointer;margin:8px;font-family:Georgia,serif;letter-spacing:1px;}
-.btn:hover{filter:brightness(1.15);}
-.btn:disabled{opacity:.4;cursor:not-allowed;}
-#btn-back{position:fixed;top:15px;left:15px;z-index:999;background:rgba(0,0,0,.6);border:2px solid var(--gold-dark,#b8860b);
-  color:#fff;padding:10px 16px;border-radius:30px;cursor:pointer;display:none;font-family:Georgia,serif;}
-input{padding:14px;font-size:1.1rem;border-radius:8px;border:2px solid var(--gold);background:#111;color:#fff;width:90%;max-width:320px;margin:8px;text-align:center;}
-.opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:95%;max-width:700px;margin-top:20px;}
-.opt{padding:26px 12px;border-radius:14px;font-size:1.4rem;font-weight:bold;cursor:pointer;color:#fff;border:none;min-height:90px;}
-.opt:disabled{opacity:.5;}
-.o0{background:var(--red);}.o1{background:var(--blue);}.o2{background:var(--yellow);color:#222;}.o3{background:var(--green);}
-.qtext{font-size:1.9rem;margin:10px 0 18px;max-width:900px;line-height:1.3;}
-.timerbar{height:10px;width:95%;max-width:700px;background:#333;border-radius:6px;overflow:hidden;margin:14px 0;}
-.timerfill{height:100%;background:var(--gold);width:100%;}
-.lead{width:95%;max-width:500px;text-align:left;}
-.lead div{display:flex;justify-content:space-between;padding:10px 16px;background:#1e272e;margin:6px 0;border-radius:8px;}
-.small{color:#999;margin-top:10px;}
-.roomcode{font-size:4rem;letter-spacing:10px;color:var(--gold);font-family:Georgia,serif;margin:10px 0;}
-.errmsg{color:#e74c3c;min-height:1.4em;margin-top:6px;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colosseum Quiz - Gladiator Arena</title>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<button id="btn-back" onclick="goHome()">⬅️ KEMBALI</button>
+    <button id="btn-sound" class="sound-toggle" onclick="Sound.toggle()" title="Suara On/Off">🔊</button>
 
-<div id="s-role" class="screen active">
-  <h1 style="color:var(--gold)">⚔️ COLOSSEUM KUIS</h1>
-  <p>Demo gaya Kahoot — PAI SD</p>
-  <p class="small">⚠️ 30 soal di bawah ini contoh demo, bukan soal kurikulum asli. Maks 15 peserta per room.</p>
-  <button class="btn" onclick="chooseRole('host')">🖥️ TAMPILAN LAYAR (Host)</button>
-  <button class="btn" onclick="chooseRole('player')">📱 GABUNG SEBAGAI PESERTA</button>
-  <p id="init-msg" class="errmsg"></p>
-</div>
+    <main id="screen-intro" class="screen">
+        <div id="i1" style="opacity:0; transition: 1.5s;" class="intro-t">Hanya yang terpilih...</div>
+        <div id="i2" style="opacity:0; transition: 1.5s; margin: 20px 0;" class="intro-t">Hanya yang berani...</div>
+        <div id="i3" style="opacity:0; transition: 1.5s; color:var(--gold); font-size: 3.5rem;" class="intro-t">DEWA MENANTI DI ARENA.</div>
+        <button id="gb" style="opacity:0; transition: 1s;" class="btn-action" onclick="Game.switchScreen('screen-materi')">BUKA GERBANG 🏛️</button>
+    </main>
 
-<div id="s-host-lobby" class="screen">
-  <div id="h-precreate">
-    <h2 style="color:var(--gold)">Buat Room Baru</h2>
-    <button class="btn" onclick="createRoom()">BUAT ROOM ⚔️</button>
-  </div>
-  <div id="h-lobby-view" style="display:none;">
-    <p>Kode Room:</p>
-    <div id="h-roomcode" class="roomcode"></div>
-    <h3 id="h-count">0 / 15 peserta bergabung</h3>
-    <div id="h-players" class="lead"></div>
-    <button class="btn" id="h-start-btn" onclick="startGame()" disabled>MULAI KUIS ⚔️</button>
-  </div>
-</div>
+    <main id="screen-materi" class="screen hidden">
+        <h1 class="brand-title title-glow" style="font-size:3rem;">PILIH ARENAMU</h1>
+        <div class="stone-panel" style="max-width:600px; text-align:center;">
+            <div class="select-box">
+                <select id="materi-select" class="game-select">
+                    <option value="">⚔️ Pilih Materi</option>
+                    <option value="Aqidah">🕌 Aqidah</option>
+                    <option value="Akhlaq">✨ Akhlaq</option>
+                    <option value="Quran">📖 Al-Qur'an</option>
+                    <option value="Fiqih">⚖️ Fiqih</option>
+                    <option value="Tarikh">🏛️ Tarikh</option>
+                </select>
+            </div>
 
-<div id="s-join" class="screen">
-  <h2 style="color:var(--gold)">Gabung Arena</h2>
-  <input id="roomcode-input" placeholder="Kode Room (4 digit)" maxlength="4" inputmode="numeric">
-  <input id="nick" placeholder="Nama kamu...">
-  <br><button class="btn" onclick="joinGame()">GABUNG ⚔️</button>
-  <p id="join-err" class="errmsg"></p>
-</div>
+            <div class="select-box">
+                <select id="kelas-select" class="game-select">
+                    <option value="">🎓 Pilih Kelas</option>
+                    <option value="1">Kelas 1</option>
+                    <option value="2">Kelas 2</option>
+                    <option value="3">Kelas 3</option>
+                    <option value="4">Kelas 4</option>
+                    <option value="5">Kelas 5</option>
+                    <option value="6">Kelas 6</option>
+                </select>
+            </div>
 
-<div id="s-host-game" class="screen">
-  <div id="h-roulette" style="display:none;">
-    <h2 style="color:var(--gold)">🎲 MEMILIH RAJA...</h2>
-    <div id="h-roulette-name" style="font-size:3rem;font-family:Georgia,serif;"></div>
-  </div>
-  <div id="h-duel" style="display:none;width:100%;">
-    <div id="h-qnum" style="color:var(--gold)"></div>
-    <div class="timerbar"><div id="h-timerfill" class="timerfill"></div></div>
-    <div style="display:flex;justify-content:space-around;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div><div style="color:var(--gold)">RAJA</div><div id="h-king-name" style="font-size:1.6rem;font-family:Georgia,serif;"></div><div id="h-king-score" style="font-size:2rem;color:var(--gold);"></div></div>
-      <div style="font-size:1.8rem;">VS</div>
-      <div><div style="color:var(--red)">PENANTANG</div><div id="h-chal-name" style="font-size:1.6rem;font-family:Georgia,serif;"></div><div id="h-chal-score" style="font-size:2rem;color:var(--red);"></div></div>
+            <div class="select-box">
+                <select id="semester-select" class="game-select">
+                    <option value="">📅 Pilih Semester</option>
+                    <option value="1">Semester 1</option>
+                    <option value="2">Semester 2</option>
+                </select>
+            </div>
+            <div class="select-box">
+                <select id="ronde-select" class="game-select">
+                    <option value="3" selected>🔁 3 Ronde (Normal)</option>
+                    <option value="5">🔁 5 Ronde (Panjang)</option>
+                    <option value="7">🔁 7 Ronde (Sangat Panjang)</option>
+                </select>
+            </div>
+            <button id="btn-lanjut" class="btn-action" onclick="pilihFilter()" disabled>⏳ MEMUAT SOAL...</button>
+        </div>
+    </main>
+
+    <main id="screen-input" class="screen hidden">
+        <h1 class="brand-title">COLOSSEUM</h1>
+        <div class="stone-panel">
+            <textarea id="player-input" placeholder="Masukkan Nama Gladiator (pisahkan dengan koma atau enter)..."></textarea>
+            <button onclick="Game.startSelection()" class="btn-action">ACAK TAKDIR RAJA ⚔️</button>
+        </div>
+    </main>
+
+    <main id="screen-selection" class="screen hidden">
+        <h2 class="brand-title" style="font-size: 3rem;">MEMILIH RAJA...</h2>
+        <div class="roulette-box" style="height:150px; overflow:hidden; border-top:5px solid var(--gold); border-bottom:5px solid var(--gold); width:600px; position:relative;">
+            <div id="roulette-strip" style="position:absolute; width:100%; top:0; transition: top 4s cubic-bezier(0.1, 0, 0.1, 1);"></div>
+        </div>
+    </main>
+
+    <main id="screen-briefing" class="screen hidden">
+        <div class="stone-panel" style="text-align:center;">
+            <h2 class="brand-title" style="font-size: 2.5rem;">URUTAN PERANG</h2>
+            <div style="display:flex; justify-content:space-around; align-items:center; margin:30px 0;">
+                <div>
+                    <div style="color:var(--gold);">RAJA</div>
+                    <div id="k-brief" style="font-size:3.5rem; font-family:'Cinzel';"></div>
+                </div>
+                <div style="font-size:3rem;">VS</div>
+                <div>
+                    <div style="color:var(--blood);">PENANTANG I</div>
+                    <div id="c-brief" style="font-size:3.5rem; font-family:'Cinzel';"></div>
+                </div>
+            </div>
+            <div id="queue-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:10px; margin-bottom: 20px;"></div>
+            <button onclick="masukArenaCek()" class="btn-action">MASUK ARENA 🏛️</button>
+        </div>
+    </main>
+
+    <main id="screen-battle" class="screen hidden">
+        <button id="btn-pause" class="btn-pause" onclick="Game.togglePause()">⏸ JEDA</button>
+        <div id="pause-overlay" class="hidden">
+            <div class="alert-box">
+                <h1 style="font-family:'Cinzel'; font-size:2.5rem; color:var(--gold);">⏸ DIJEDA</h1>
+                <p style="font-size:1.4rem; margin:20px 0;">Pertandingan dihentikan sementara oleh guru...</p>
+            </div>
+        </div>
+        <div id="progress-wrap">
+            <div id="progress-text">Duel 1 / 1</div>
+            <div id="progress-bar-outer"><div id="progress-bar-inner"></div></div>
+        </div>
+        <div class="arena-grid">
+            <div class="warrior-card" style="border-color: var(--gold);">
+                <div class="brand-title" id="king-name" style="font-size:2rem; letter-spacing: 2px;"></div>
+                <div id="king-score" style="font-size:4rem; font-family:'Cinzel'; color:var(--gold);">0</div>
+                <div class="pad-grid">
+                    <button class="pad-btn" onclick="Game.submit('king', 'A', this)">A</button>
+                    <button class="pad-btn" onclick="Game.submit('king', 'B', this)">B</button>
+                    <button class="pad-btn" onclick="Game.submit('king', 'C', this)">C</button>
+                    <button class="pad-btn" onclick="Game.submit('king', 'D', this)">D</button>
+                </div>
+            </div>
+
+            <div class="q-card">
+                <div id="round-info" style="font-weight:bold; color:#8e44ad; font-size: 1.2rem;">PUTARAN 1</div>
+                <div id="timer-bar-outer"><div id="timer-bar-inner"></div></div>
+                <div id="q-text">Memuat Soal...</div>
+                <div id="opt-text"></div>
+            </div>
+
+            <div class="warrior-card" style="border-color: var(--blood);">
+                <div class="brand-title" id="chal-name" style="font-size:2rem; letter-spacing: 2px;"></div>
+                <div id="chal-score" style="font-size:4rem; font-family:'Cinzel'; color:var(--blood);">0</div>
+                <div class="pad-grid">
+                    <button class="pad-btn" onclick="Game.submit('chal', 'A', this)">A</button>
+                    <button class="pad-btn" onclick="Game.submit('chal', 'B', this)">B</button>
+                    <button class="pad-btn" onclick="Game.submit('chal', 'C', this)">C</button>
+                    <button class="pad-btn" onclick="Game.submit('chal', 'D', this)">D</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="next-up-wrap">
+            <div id="next-up-title">ANTREAN BERIKUTNYA</div>
+            <div id="next-up-list"></div>
+        </div>
+    </main>
+
+    <div id="result-overlay" class="hidden"></div>
+
+    <div id="alert-overlay">
+        <div class="alert-box">
+            <h1 id="alert-title" style="font-family:'Cinzel'; font-size:2.5rem; color:var(--gold);"></h1>
+            <p id="alert-message" style="font-size:1.4rem; margin:20px 0;"></p>
+            <button class="btn-action" onclick="closeAlert()">KEMBALI</button>
+        </div>
     </div>
-    <div id="h-qtext" class="qtext"></div>
-    <div id="h-opts" class="opts" style="max-width:700px;margin:0 auto;"></div>
-    <div id="h-queue-next" class="small"></div>
-  </div>
-  <div id="h-reveal" style="display:none;">
-    <h2 id="h-correct" style="color:#27ae60;"></h2>
-    <h2 id="h-winner" style="color:var(--gold);"></h2>
-    <p id="h-roast" style="font-style:italic;color:#ccc;max-width:700px;"></p>
-    <button class="btn" onclick="hostNextDuel()">LANJUT ➡️</button>
-  </div>
-  <div id="h-podium" style="display:none;">
-    <h1 style="color:var(--gold)">🏆 JUARA ARENA 🏆</h1>
-    <div id="h-podium-list" class="lead"></div>
-  </div>
-</div>
 
-<div id="s-player" class="screen">
-  <div id="p-wait"><h2>Menunggu host memulai...</h2></div>
-  <div id="p-question" style="display:none;width:100%;">
-    <div id="p-score" style="color:var(--gold);margin-bottom:10px;"></div>
-    <div class="opts">
-      <button class="opt o0" onclick="answer(0)">🔺</button>
-      <button class="opt o1" onclick="answer(1)">💎</button>
-      <button class="opt o2" onclick="answer(2)">⬤</button>
-      <button class="opt o3" onclick="answer(3)">⬛</button>
-    </div>
-  </div>
-  <div id="p-waiting-reveal" style="display:none;"><h2 id="p-wait-text">⏳ Menunggu...</h2></div>
-  <div id="p-reveal" style="display:none;">
-    <h1 id="p-result"></h1>
-    <p id="p-score2"></p>
-  </div>
-  <div id="p-podium" style="display:none;">
-    <h1 style="color:var(--gold)">SELESAI!</h1>
-    <p id="p-rank"></p>
-  </div>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import {
-  getFirestore, doc, setDoc, getDoc, updateDoc,
-  onSnapshot, collection, getDocs, increment
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-// ====== CONFIG FIREBASE KAMU ======
-const firebaseConfig = {
-  apiKey: "AIzaSyD5toRa5DnvW3S87J3NpjsGtueHwFc5Ryg",
-  authDomain: "colosium-pai.firebaseapp.com",
-  projectId: "colosium-pai",
-  storageBucket: "colosium-pai.firebasestorage.app",
-  messagingSenderId: "780796546511",
-  appId: "1:780796546511:web:bb3adc3b511dfd520216ba"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-// ===================================
-
-// Helper biar pemanggilan di bawah tetap singkat
-const roomDoc = (code) => doc(db, 'rooms', code);
-const playersCol = (code) => collection(db, 'rooms', code, 'players');
-const playerDoc = (code, pid) => doc(db, 'rooms', code, 'players', pid);
-
-const QUESTIONS = [
-  {q:"Rukun Islam ada berapa?", a:"5", o:["4","6","3"]},
-  {q:"Rukun Islam yang pertama adalah...", a:"Syahadat", o:["Salat","Puasa","Zakat"]},
-  {q:"Salat wajib dilakukan sebanyak berapa kali sehari?", a:"5", o:["3","4","6"]},
-  {q:"Puasa Ramadan hukumnya...", a:"Wajib", o:["Sunnah","Mubah","Makruh"]},
-  {q:"Rukun Iman ada berapa?", a:"6", o:["5","4","7"]},
-  {q:"Kitab suci umat Islam adalah...", a:"Al-Qur'an", o:["Taurat","Injil","Zabur"]},
-  {q:"Nabi terakhir adalah...", a:"Muhammad SAW", o:["Isa AS","Musa AS","Ibrahim AS"]},
-  {q:"Kiblat umat Islam saat salat menghadap ke...", a:"Kakbah", o:["Masjid Nabawi","Masjidil Aqsa","Madinah"]},
-  {q:"Mengucapkan dua kalimat syahadat termasuk rukun Islam ke...", a:"1", o:["2","3","4"]},
-  {q:"Zakat fitrah dibayarkan pada bulan...", a:"Ramadan", o:["Syawal","Muharram","Rajab"]},
-  {q:"Ibadah haji wajib bagi yang...", a:"Mampu", o:["Semua orang","Anak-anak","Orang miskin"]},
-  {q:"Malaikat yang bertugas menyampaikan wahyu adalah...", a:"Jibril", o:["Mikail","Israfil","Izrail"]},
-  {q:"Sifat jujur pada rasul disebut...", a:"Siddiq", o:["Amanah","Tabligh","Fatanah"]},
-  {q:"Berbohong termasuk akhlak...", a:"Tercela", o:["Terpuji","Mulia","Baik"]},
-  {q:"Sebelum salat kita wajib...", a:"Berwudu", o:["Makan","Tidur","Bermain"]},
-  {q:"Bacaan pembuka dalam salat adalah surat...", a:"Al-Fatihah", o:["Al-Ikhlas","An-Nas","Al-Falaq"]},
-  {q:"Hari besar umat Islam setelah puasa Ramadan adalah...", a:"Idulfitri", o:["Iduladha","Maulid Nabi","Isra Mikraj"]},
-  {q:"Nabi yang dikenal sangat sabar bernama...", a:"Ayyub AS", o:["Nuh AS","Musa AS","Daud AS"]},
-  {q:"Membantu orang yang kesusahan termasuk sikap...", a:"Terpuji", o:["Tercela","Sombong","Malas"]},
-  {q:"Allah Maha Esa artinya...", a:"Allah itu satu", o:["Allah banyak","Allah lemah","Allah jauh"]},
-  {q:"Tempat ibadah umat Islam disebut...", a:"Masjid", o:["Gereja","Pura","Wihara"]},
-  {q:"Membaca Al-Qur'an sebaiknya diawali dengan...", a:"Ta'awuz dan Basmalah", o:["Salam","Takbir","Tahmid"]},
-  {q:"Menyayangi dan menghormati orang tua disebut...", a:"Birrul walidain", o:["Durhaka","Sombong","Acuh"]},
-  {q:"Nabi yang membangun Kakbah bersama putranya adalah...", a:"Ibrahim AS", o:["Nuh AS","Adam AS","Sulaiman AS"]},
-  {q:"Pada hari Jumat, laki-laki muslim diwajibkan salat...", a:"Jumat", o:["Dzuhur","Tahajud","Dhuha"]},
-  {q:"Larangan dalam Islam disebut...", a:"Haram", o:["Halal","Sunnah","Mubah"]},
-  {q:"Sikap tidak sombong disebut...", a:"Tawaduk", o:["Takabur","Riya","Dengki"]},
-  {q:"Al-Qur'an diturunkan kepada Nabi Muhammad melalui malaikat...", a:"Jibril", o:["Mikail","Munkar","Nakir"]},
-  {q:"Salat lima waktu dimulai dari salat...", a:"Subuh", o:["Dzuhur","Magrib","Isya"]},
-  {q:"Mengucapkan salam ketika bertemu sesama muslim hukumnya...", a:"Sunnah", o:["Wajib","Haram","Makruh"]}
-];
-const TIME_LIMIT = 15000;
-const MAX_PLAYERS = 15;
-
-const ROASTS = {
-  kingWins: ["Tahta ini terlalu tinggi buatmu, ${target}!", "Minggir kamu ${target}! Raja tak terkalahkan.", "Cuma segitu kemampuanmu, ${target}?"],
-  chalWins: ["Raja baru telah tiba! Turun kamu ${target}!", "Payah kamu ${target}, tahta ini milikku!", "Rakyat bosan denganmu, ${target}!"],
-  audienceRoast: ["Penonton kecewa! ${k} dan ${c} sama-sama zonk!", "Mending kalian berdua pulang aja!", "Dewa pun geleng-geleng melihat ${k} dan ${c}."]
-};
-function getTitle(i, s){
-  if(s===0) return "TAWANAN ARENA ⛓️";
-  if(i===0) return "KAISAR ARENA 👑";
-  if(i===1) return "GLADIATOR ULUNG ⚔️";
-  if(i===2) return "PRAJURIT TANGGUH 🛡️";
-  return "RAKYAT JELATA 📯";
-}
-
-let myRole, myRoomCode, myId, myName='', myScore=0;
-let lastPhase=null, lastQIndex=-1, lastKing=null, timerInt=null, revealing=false;
-let activeUnsubs = [];
-
-function show(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.getElementById('btn-back').style.display = id==='s-role' ? 'none' : 'block';
-}
-function goHome(){
-  activeUnsubs.forEach(u=>u());
-  activeUnsubs=[];
-  clearInterval(timerInt); timerInt=null;
-  myRole=null; myRoomCode=null; answeredThisQ=-1; myScore=0;
-  show('s-role');
-}
-function genCode(){ return String(Math.floor(1000+Math.random()*9000)); }
-function genId(){ return 'p'+Math.random().toString(36).slice(2,10); }
-
-function shuffleOrder(qIndex){
-  let arr=[0,1,2,3], seed=(qIndex*2654435761)%2147483647;
-  for(let i=3;i>0;i--){ seed=(seed*48271)%2147483647; const j=seed%(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; }
-  return arr;
-}
-function getOptions(qi){ const q=QUESTIONS[qi]; const base=[q.a,...q.o]; return shuffleOrder(qi).map(i=>base[i]); }
-function correctIndex(qi){ return shuffleOrder(qi).indexOf(0); }
-
-function chooseRole(role){
-  myRole=role;
-  if(role==='host'){ show('s-host-lobby'); document.getElementById('h-precreate').style.display='block'; document.getElementById('h-lobby-view').style.display='none'; }
-  else show('s-join');
-}
-
-async function createRoom(){
-  myRoomCode = genCode();
-  await setDoc(roomDoc(myRoomCode), {phase:'lobby', qIndex:0});
-  document.getElementById('h-precreate').style.display='none';
-  document.getElementById('h-lobby-view').style.display='block';
-  document.getElementById('h-roomcode').innerText = myRoomCode;
-
-  const unsub = onSnapshot(playersCol(myRoomCode), snap=>{
-    window.__players = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    renderHost();
-  });
-  activeUnsubs.push(unsub);
-  const unsub2 = onSnapshot(roomDoc(myRoomCode), snap=>{
-    window.__game = snap.exists() ? snap.data() : {phase:'lobby'};
-    renderHost();
-  });
-  activeUnsubs.push(unsub2);
-}
-
-function nameOf(players,id){ const p=players.find(x=>x.id===id); return p?p.name:'???'; }
-function scoreOf(players,id){ const p=players.find(x=>x.id===id); return p?(p.score||0):0; }
-
-function renderHost(){
-  const g = window.__game || {phase:'lobby'};
-  const players = window.__players || [];
-  if(g.phase==='lobby'){
-    document.getElementById('h-count').innerText = players.length+' / '+MAX_PLAYERS+' peserta bergabung';
-    document.getElementById('h-players').innerHTML = players.map(p=>`<div><span>${p.name}</span></div>`).join('');
-    document.getElementById('h-start-btn').disabled = players.length<2;
-    return;
-  }
-  show('s-host-game');
-  if(g.phase!==lastPhase || g.qIndex!==lastQIndex || g.king!==lastKing){
-    lastPhase=g.phase; lastQIndex=g.qIndex; lastKing=g.king; clearInterval(timerInt); timerInt=null; revealing=false;
-  }
-  document.getElementById('h-roulette').style.display = g.phase==='rouletting'?'block':'none';
-  document.getElementById('h-duel').style.display = g.phase==='dueling'?'block':'none';
-  document.getElementById('h-reveal').style.display = g.phase==='reveal'?'block':'none';
-  document.getElementById('h-podium').style.display = g.phase==='podium'?'block':'none';
-
-  if(g.phase==='dueling' || g.phase==='reveal'){
-    const chalId = g.queue[0];
-    document.getElementById('h-king-name').innerText = nameOf(players,g.king);
-    document.getElementById('h-king-score').innerText = scoreOf(players,g.king)+' pt';
-    document.getElementById('h-chal-name').innerText = nameOf(players,chalId);
-    document.getElementById('h-chal-score').innerText = scoreOf(players,chalId)+' pt';
-  }
-  if(g.phase==='dueling'){
-    document.getElementById('h-qnum').innerText = `Ronde ${g.currentRound}/${g.maxRounds} — Duel ${g.duelCount+1}`;
-    document.getElementById('h-qtext').innerText = QUESTIONS[g.qIndex].q;
-    const opts = getOptions(g.qIndex);
-    document.getElementById('h-opts').innerHTML = opts.map((o,i)=>`<div class="opt o${i}">${o}</div>`).join('');
-    const upcoming = g.queue.slice(1).map(id=>nameOf(players,id));
-    document.getElementById('h-queue-next').innerText = upcoming.length ? 'Antrean: '+upcoming.join(' → ') : 'Duel terakhir di antrean';
-    if(!timerInt){
-      const tick=()=>{
-        const left = Math.max(0, g.timeLimit-(Date.now()-g.startAt));
-        document.getElementById('h-timerfill').style.width = (left/g.timeLimit*100)+'%';
-      };
-      tick();
-      timerInt=setInterval(tick,300);
-    }
-    resolveDuelIfNeeded(g);
-  }
-  if(g.phase==='reveal'){
-    const ci = correctIndex(g.qIndex);
-    document.getElementById('h-correct').innerText = `Jawaban benar: ${getOptions(g.qIndex)[ci]}`;
-    const chalId = g.queue[0];
-    let winText = 'SERI — dua-duanya salah / waktu habis';
-    let roast;
-    if(g.winnerSide==='king'){
-      winText = `👑 ${nameOf(players,g.king)} BERTAHAN!`;
-      roast = ROASTS.kingWins[g.qIndex % ROASTS.kingWins.length].replace('${target}', nameOf(players,chalId));
-    } else if(g.winnerSide==='chal'){
-      winText = `⚔️ ${nameOf(players,chalId)} MEREBUT TAHTA!`;
-      roast = ROASTS.chalWins[g.qIndex % ROASTS.chalWins.length].replace('${target}', nameOf(players,g.king));
-    } else {
-      roast = ROASTS.audienceRoast[g.qIndex % ROASTS.audienceRoast.length].replace('${k}',nameOf(players,g.king)).replace('${c}',nameOf(players,chalId));
-    }
-    document.getElementById('h-winner').innerText = winText;
-    document.getElementById('h-roast').innerText = '"'+roast+'"';
-  }
-  if(g.phase==='podium'){
-    const sorted=[...players].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,5);
-    document.getElementById('h-podium-list').innerHTML = sorted.map((p,i)=>`<div><span>${getTitle(i,p.score||0)}: ${p.name}</span><span>${p.score||0} pt</span></div>`).join('');
-  }
-}
-
-async function startGame(){
-  const players = window.__players || [];
-  const ids = players.map(p=>p.id);
-  const kIdx = Math.floor(Math.random()*ids.length);
-  const king = ids[kIdx];
-  const queue = ids.filter((id,i)=>i!==kIdx).sort(()=>Math.random()-0.5);
-  await setDoc(roomDoc(myRoomCode), {
-    phase:'rouletting', king, queue, currentRound:1, maxRounds:3, duelCount:0,
-    duelAnswers:{king:null,chal:null}, winnerSide:null
-  });
-  runRoulette(king);
-}
-
-function runRoulette(kingId){
-  const players = window.__players || [];
-  const names = players.map(p=>p.name);
-  const el = document.getElementById('h-roulette-name');
-  el.style.color = '#fff';
-  let i = 0;
-  const spin = setInterval(()=>{
-    el.innerText = names[Math.floor(Math.random()*names.length)];
-    i++;
-    if(i>18){
-      clearInterval(spin);
-      el.innerText = '👑 '+nameOf(players,kingId);
-      el.style.color = 'var(--gold)';
-      setTimeout(async ()=>{
-        await setDoc(roomDoc(myRoomCode), {
-          ...window.__game, phase:'dueling',
-          qIndex: Math.floor(Math.random()*QUESTIONS.length),
-          startAt: Date.now(), timeLimit: TIME_LIMIT
-        });
-      }, 1200);
-    }
-  }, 120);
-}
-
-async function hostNextDuel(){
-  const g = window.__game;
-  let { king, queue, currentRound, maxRounds, duelCount } = g;
-  if(g.winnerSide==='chal'){ const oldKing=king; king=queue[0]; queue=queue.slice(1).concat(oldKing); }
-  else { queue = queue.slice(1).concat(queue[0]); }
-  duelCount++;
-  if(duelCount>=queue.length){ duelCount=0; currentRound++; }
-  if(currentRound>maxRounds){ await setDoc(roomDoc(myRoomCode), {phase:'podium'}); return; }
-  await setDoc(roomDoc(myRoomCode), {
-    phase:'dueling', king, queue, currentRound, maxRounds, duelCount,
-    qIndex: Math.floor(Math.random()*QUESTIONS.length),
-    startAt: Date.now(), timeLimit: TIME_LIMIT,
-    duelAnswers:{king:null,chal:null}, winnerSide:null
-  });
-}
-
-async function resolveDuelIfNeeded(g){
-  if(g.phase!=='dueling' || revealing) return;
-  const ka = g.duelAnswers && g.duelAnswers.king;
-  const ca = g.duelAnswers && g.duelAnswers.chal;
-  let winnerSide;
-  if(ka && ka.correct && ca && ca.correct) winnerSide = ka.at<=ca.at ? 'king':'chal';
-  else if(ka && ka.correct) winnerSide = 'king';
-  else if(ca && ca.correct) winnerSide = 'chal';
-  else if(Date.now()-g.startAt >= g.timeLimit) winnerSide = null;
-  else return;
-  revealing = true;
-  if(winnerSide){
-    const winnerId = winnerSide==='king' ? g.king : g.queue[0];
-    await updateDoc(playerDoc(myRoomCode, winnerId), {score: increment(10)});
-  }
-  await setDoc(roomDoc(myRoomCode), {...g, phase:'reveal', winnerSide});
-}
-
-async function joinGame(){
-  const code = document.getElementById('roomcode-input').value.trim();
-  const errEl = document.getElementById('join-err');
-  errEl.innerText='';
-  if(!/^[0-9]{4}$/.test(code)){ errEl.innerText='Kode room harus 4 angka.'; return; }
-
-  const roomSnap = await getDoc(roomDoc(code));
-  if(!roomSnap.exists()){ errEl.innerText='Room gak ditemukan. Cek lagi kodenya.'; return; }
-
-  const playersRef = playersCol(code);
-  const existing = await getDocs(playersRef);
-  if(existing.size >= MAX_PLAYERS){ errEl.innerText='Room sudah penuh (maks 15 peserta).'; return; }
-
-  myName = document.getElementById('nick').value.trim() || 'Gladiator';
-  myRoomCode = code;
-  myId = genId();
-  myScore = 0;
-  await setDoc(playerDoc(myRoomCode, myId), {name:myName, score:0, joinedAt:Date.now()});
-  show('s-player');
-
-  const unsub = onSnapshot(roomDoc(myRoomCode), snap=>{
-    window.__game = snap.exists() ? snap.data() : {phase:'lobby'};
-    renderPlayer();
-  });
-  activeUnsubs.push(unsub);
-  // Skor di-update oleh host (lewat increment()), jadi kita dengerin dokumen kita sendiri biar sinkron
-  const unsubMe = onSnapshot(playerDoc(myRoomCode, myId), snap=>{
-    if(snap.exists()) myScore = snap.data().score || 0;
-    renderPlayer();
-  });
-  activeUnsubs.push(unsubMe);
-  const unsubAll = onSnapshot(playersCol(myRoomCode), snap=>{
-    window.__players = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    renderPlayer();
-  });
-  activeUnsubs.push(unsubAll);
-}
-
-function renderPlayer(){
-  const g = window.__game || {phase:'lobby'};
-  const amKing = g.king===myId;
-  const amChal = g.queue && g.queue[0]===myId;
-  const inDuel = amKing || amChal;
-  const mySide = amKing ? 'king' : (amChal ? 'chal' : null);
-  const myAnswer = mySide && g.duelAnswers ? g.duelAnswers[mySide] : null;
-
-  document.getElementById('p-wait').style.display = (g.phase==='lobby'||g.phase==='rouletting') ? 'block':'none';
-  if(g.phase==='rouletting') document.querySelector('#p-wait h2').innerText = '🎲 Host sedang memilih Raja...';
-  else document.querySelector('#p-wait h2').innerText = 'Menunggu host memulai...';
-  document.getElementById('p-question').style.display = (g.phase==='dueling' && inDuel && !myAnswer) ? 'block':'none';
-  document.getElementById('p-waiting-reveal').style.display = (g.phase==='dueling' && (!inDuel || myAnswer)) ? 'block':'none';
-  document.getElementById('p-reveal').style.display = g.phase==='reveal' ? 'block':'none';
-  document.getElementById('p-podium').style.display = g.phase==='podium' ? 'block':'none';
-
-  if(g.phase==='dueling'){
-    if(inDuel && !myAnswer){
-      document.getElementById('p-score').innerText = myName+' · '+myScore+' poin';
-      document.querySelectorAll('#p-question .opt').forEach(b=>b.disabled=false);
-    } else if(myAnswer){
-      document.getElementById('p-wait-text').innerText = '⏳ Jawaban terkirim, menunggu hasil...';
-    } else {
-      document.getElementById('p-wait-text').innerText = '⏳ Sedang bertarung: Raja VS Penantang. Giliranmu belum tiba, pantengin layar!';
-    }
-  }
-  if(g.phase==='reveal'){
-    const el = document.getElementById('p-result');
-    if(inDuel){
-      const won = g.winnerSide===mySide;
-      el.innerText = won ? '✅ MENANG! +10' : (g.winnerSide===null ? '➖ SERI' : '❌ KALAH');
-      el.style.color = won ? '#27ae60' : (g.winnerSide===null ? '#f1c40f' : '#e74c3c');
-    } else {
-      el.innerText = '⚔️ Duel selesai';
-      el.style.color = '#fff';
-    }
-    document.getElementById('p-score2').innerText = 'Total skor: '+myScore;
-  }
-  if(g.phase==='podium'){
-    const players = window.__players || [];
-    const sorted = [...players].sort((a,b)=>(b.score||0)-(a.score||0));
-    const myRank = sorted.findIndex(p=>p.id===myId);
-    const title = myRank>=0 ? getTitle(myRank, myScore) : '';
-    document.getElementById('p-rank').innerText = `${title} — Skor akhir: ${myScore} poin (peringkat #${myRank+1})`;
-  }
-}
-
-async function answer(choice){
-  const g = window.__game;
-  const mySide = (g.king===myId) ? 'king' : 'chal';
-  const opts = getOptions(g.qIndex);
-  const correct = (opts[choice] === QUESTIONS[g.qIndex].a);
-  document.querySelectorAll('#p-question .opt').forEach(b=>b.disabled=true);
-  renderPlayer();
-  await updateDoc(roomDoc(myRoomCode), { ['duelAnswers.'+mySide]: {choice, correct, at: Date.now()} });
-}
-
-// Wajib: script type="module" gak otomatis taruh fungsi ke window,
-// padahal onclick="" di HTML butuh itu.
-window.goHome = goHome;
-window.chooseRole = chooseRole;
-window.createRoom = createRoom;
-window.startGame = startGame;
-window.hostNextDuel = hostNextDuel;
-window.joinGame = joinGame;
-window.answer = answer;
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
