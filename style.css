@@ -1,1 +1,954 @@
-:root{--gold:#ffcf40;--gold-dark:#b8860b;--blood:#ff4d4d;--deep-void:#0a0a12;--iron:#d1ccc0;--green:#27ae60;--purple:#8e44ad}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:'Poppins',sans-serif;background:var(--deep-void);color:#fff;height:100%;overflow:hidden}button,input,select{font:inherit}.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--deep-void);transition:.35s ease;z-index:10;padding:20px}.hidden{opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:1!important}.intro-t{font-family:'Cinzel',serif;font-size:3rem;color:var(--iron);text-align:center;opacity:0;transition:1.2s}.intro-t.gold{color:var(--gold);font-size:3.5rem}.intro-actions{width:min(700px,90vw);opacity:0;transition:1s;margin-top:25px}.brand-title{font-family:'Cinzel',serif;font-size:5rem;background:linear-gradient(to bottom,#fff,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:8px;text-transform:uppercase;text-align:center;margin:10px}.title-glow{animation:glowPulse 2s infinite alternate}.subtitle{text-align:center;color:var(--iron);font-size:1.2rem}.stone-panel{background:linear-gradient(145deg,#1e272e,#000);border:4px solid #34495e;padding:32px;border-radius:12px;width:85%;max-width:900px;box-shadow:0 0 20px rgba(0,0,0,.8),inset 0 0 20px rgba(255,255,255,.05)}.stone-panel.compact{max-width:650px}.stone-panel.center{text-align:center}.stone-panel label{display:block;font-family:'Cinzel';color:var(--iron);margin:10px 0 7px}.game-select,.text-input{width:100%;padding:14px 16px;font-size:1.05rem;color:#fff;background:linear-gradient(145deg,#1c1c2b,#000);border:2px solid var(--gold-dark);border-radius:10px;outline:none;margin-bottom:7px}.text-input:focus,.game-select:focus{border-color:var(--gold);box-shadow:0 0 15px rgba(255,207,64,.35)}.code-input{text-transform:uppercase;text-align:center;letter-spacing:7px;font-family:'Cinzel';font-weight:700}.btn-action{background:linear-gradient(135deg,#c0392b,#8e0000);color:#fff;font-family:'Cinzel',serif;border:none;padding:17px 30px;font-size:1.55rem;cursor:pointer;clip-path:polygon(3% 0,100% 0,97% 100%,0 100%);transition:.25s;width:100%;margin-top:15px}.btn-action:hover{transform:scale(1.015);filter:brightness(1.18)}.btn-action:disabled{opacity:.45;cursor:not-allowed}.btn-secondary{background:rgba(255,255,255,.06);border:2px solid #555;color:var(--iron);padding:12px 20px;border-radius:10px;cursor:pointer;margin:8px 4px}.btn-secondary:hover{border-color:var(--gold);color:#fff}.btn-secondary.wide{width:100%;margin:10px 0}.role-grid{display:grid;grid-template-columns:repeat(2,minmax(250px,360px));gap:25px;margin:25px 0}.role-card{background:linear-gradient(145deg,#1e272e,#000);border:3px solid #34495e;border-radius:15px;color:#fff;padding:30px;cursor:pointer;text-align:left;transition:.25s}.role-card:hover{border-color:var(--gold);transform:translateY(-4px);box-shadow:0 0 25px rgba(255,207,64,.18)}.role-card span{display:block;font-size:3rem;margin-bottom:12px}.role-card b{display:block;font-family:'Cinzel';font-size:1.25rem;color:var(--gold)}.role-card small{display:block;color:var(--iron);line-height:1.5;margin-top:8px}.demo-note{color:#9c9c9c;font-size:.9rem;line-height:1.5;text-align:center;margin-top:15px}.room-code{display:flex;align-items:center;gap:25px;background:linear-gradient(145deg,#171722,#000);border:3px solid var(--gold-dark);border-radius:15px;padding:15px 30px;margin:10px 0}.room-code span{color:var(--iron);font-family:'Cinzel'}.room-code b{font-family:'Cinzel';font-size:2.2rem;color:var(--gold);letter-spacing:6px}.lobby-hint{color:var(--iron);margin:0 0 15px}.lobby-panel{max-width:850px}.lobby-head{display:flex;justify-content:space-between;font-family:'Cinzel';font-size:1.1rem;color:var(--gold);border-bottom:1px solid #444;padding-bottom:12px}.player-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin:15px 0;min-height:80px}.player-chip{padding:12px;border:2px solid #444;border-radius:10px;background:rgba(255,255,255,.05)}.player-chip .dot{color:var(--green)}.host-actions{display:flex;gap:8px;flex-wrap:wrap}.host-actions .btn-action{flex:1;min-width:260px}.status-text{text-align:center;color:var(--gold);min-height:24px;margin-top:12px}.waiting-avatar{font-size:4rem}.role-status{display:inline-block;border:1px solid var(--gold-dark);color:var(--gold);border-radius:20px;padding:8px 15px;font-family:'Cinzel';font-size:.9rem}.sound-toggle{position:fixed;top:15px;right:15px;z-index:3000;background:rgba(0,0,0,.6);border:2px solid var(--gold-dark);color:#fff;font-size:1.5rem;width:50px;height:50px;border-radius:50%;cursor:pointer}.host-badge{position:fixed;top:18px;right:78px;z-index:3000;border:1px solid #555;border-radius:20px;padding:8px 14px;color:var(--iron);font-size:.8rem;background:rgba(0,0,0,.6)}.btn-pause{position:fixed;top:15px;left:15px;z-index:3000;background:rgba(0,0,0,.6);border:2px solid var(--gold-dark);color:#fff;font-family:'Cinzel';padding:10px 16px;border-radius:30px;cursor:pointer}.arena-grid{display:grid;grid-template-columns:280px 1fr 280px;gap:25px;width:95%;max-width:1500px;align-items:stretch}.warrior-card{background:rgba(255,255,255,.05);padding:25px;border:4px solid #444;border-radius:20px;text-align:center;min-height:350px;display:flex;flex-direction:column;justify-content:center}.king-card{border-color:var(--gold)}.challenger-card{border-color:var(--blood)}.warrior-role{font-family:'Cinzel';font-size:1.1rem;color:var(--iron);margin-bottom:12px}.warrior-name{font-size:2rem;letter-spacing:2px;margin:0}.warrior-score{font-size:4rem;font-family:'Cinzel';margin:8px 0}.king-score{color:var(--gold)}.chal-score{color:var(--blood)}.mobile-answer-note{font-size:.9rem;color:#888;margin-top:10px}.q-card{background:#fdf2e9;color:#2d3436;padding:35px;border:10px ridge var(--purple);border-radius:10px;text-align:center;min-height:350px}.round-info{font-weight:bold;color:var(--purple);font-size:1.1rem;margin-bottom:10px}.q-card #q-text{font-size:2.35rem;line-height:1.25;font-weight:700;margin:20px 0}.q-card #opt-text{font-size:1.35rem;text-align:left;line-height:1.55}.arena-status{margin-top:18px;padding:10px;background:rgba(142,68,173,.12);border-radius:8px;font-size:.85rem;color:#6c3483}.pad-grid{display:none}#progress-wrap{width:95%;max-width:1500px;margin:0 auto 12px;text-align:center}#progress-text{font-family:'Cinzel';color:var(--iron);font-size:.9rem;margin-bottom:6px;letter-spacing:1px}#progress-bar-outer{width:100%;height:9px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;border:1px solid #444}#progress-bar-inner{height:100%;width:0;background:linear-gradient(90deg,var(--gold-dark),var(--gold));transition:width .4s}.timer-bar{width:100%}#timer-bar-outer{width:100%;height:12px;background:rgba(0,0,0,.15);border-radius:6px;overflow:hidden;margin-bottom:20px;border:1px solid rgba(0,0,0,.2)}#timer-bar-inner{height:100%;width:100%;background:#27ae60;transition:width 1s linear,background-color 1s linear}.timer-warn{background:#f39c12!important}.timer-danger{background:var(--blood)!important}#next-up-wrap{width:95%;max-width:1500px;margin:18px auto 0;text-align:center}#next-up-title{font-family:'Cinzel';color:var(--iron);font-size:.9rem;letter-spacing:2px;margin-bottom:8px;opacity:.8}#next-up-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.next-up-chip{background:rgba(255,255,255,.06);border:2px solid #444;border-radius:30px;padding:7px 15px;font-family:'Cinzel';font-size:.9rem;color:var(--iron)}.next-up-chip.next-up-soon{border-color:var(--gold-dark);color:#fff}.result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px}.roast-text{font-style:italic;color:var(--iron);font-size:2rem;margin-top:20px;max-width:900px;line-height:1.4}.alert-box{border:3px solid var(--gold);padding:35px;border-radius:15px;max-width:650px;text-align:center;background:#050509}.alert-box h1{font-family:'Cinzel';color:var(--gold);font-size:2.5rem;margin:0 0 12px}.alert-box p{font-size:1.2rem}.medal-box{margin:8px;padding:16px 20px;border-radius:12px;width:min(650px,90vw);display:flex;justify-content:space-between;font-family:'Cinzel';font-size:1.4rem}.rank-1{background:linear-gradient(90deg,#ffd700,#b8860b);color:#000}.rank-2{background:linear-gradient(90deg,#e0e0e0,#7f8c8d);color:#000}.rank-3{background:linear-gradient(90deg,#cd7f32,#8e4e14)}.rank-none{background:rgba(255,255,255,.1);border:1px solid #444}.player-answer-screen{justify-content:flex-start;padding:20px;overflow:auto}.player-top{width:min(600px,100%);display:flex;justify-content:space-between;color:var(--gold);font-family:'Cinzel';padding:10px 0}.player-identity{width:min(600px,100%);border:2px solid #444;background:rgba(255,255,255,.05);border-radius:15px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:6px}.player-identity span{font-size:2.5rem}.player-identity b{font-family:'Cinzel';color:var(--gold)}.player-identity strong{font-size:1.5rem}.player-question-mini{width:min(600px,100%);padding:16px;margin:15px 0;text-align:center;color:var(--iron);background:rgba(255,255,255,.04);border-radius:12px}.player-timer{width:90px;height:90px;border:4px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel';font-size:2rem;margin:5px 0 18px}.answer-grid{width:min(600px,100%);display:grid;grid-template-columns:1fr 1fr;gap:15px}.answer-grid button{height:125px;border:4px solid #1a252f;border-radius:15px;font-family:'Cinzel';font-size:3rem;color:#fff;background:#2c3e50;cursor:pointer}.answer-grid button:hover{filter:brightness(1.2)}.answer-grid button:disabled{opacity:.45}.answer-grid button.selected{border-color:var(--gold);box-shadow:0 0 25px rgba(255,207,64,.5)}.player-answer-status{width:min(600px,100%);text-align:center;color:var(--iron);margin-top:18px;font-size:1.1rem;min-height:30px}@keyframes glowPulse{from{text-shadow:0 0 10px rgba(255,255,255,.2)}to{text-shadow:0 0 25px rgba(255,207,64,.8)}}#alert-overlay{position:fixed;inset:0;background:radial-gradient(circle at center,rgba(0,0,0,.95),#000);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:.3s}#alert-overlay.show{opacity:1;visibility:visible}#pause-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2200;display:flex;align-items:center;justify-content:center}.confetti-piece{position:absolute;top:-20px;opacity:.95;animation:confettiFall linear forwards}@keyframes confettiFall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.4}}#confetti-container{position:fixed;inset:0;pointer-events:none;z-index:1500;overflow:hidden}@media(max-width:1000px){.arena-grid{grid-template-columns:200px 1fr 200px;gap:12px}.q-card #q-text{font-size:1.7rem}.q-card #opt-text{font-size:1rem}.warrior-name{font-size:1.4rem}.warrior-score{font-size:3rem}.warrior-card{padding:15px}.brand-title{font-size:3.5rem}}@media(max-width:700px){.role-grid{grid-template-columns:1fr}.brand-title{font-size:2.7rem;letter-spacing:4px}.intro-t{font-size:2rem}.intro-t.gold{font-size:2.3rem}.stone-panel{width:95%;padding:22px}.arena-grid{grid-template-columns:1fr;overflow:auto}.warrior-card{min-height:120px}.q-card{order:-1;min-height:auto}.host-badge{top:72px;right:15px}.arena-grid .warrior-card{display:flex}.room-code{gap:10px;padding:12px 18px}.room-code b{font-size:1.6rem}.answer-grid button{height:105px}.host-actions{display:block}}
+/* ==========================================================================
+   1. VARIABLES & RESET
+   ========================================================================== */
+:root {
+  --gold: #ffcf40;
+  --gold-dark: #b8860b;
+  --blood: #ff4d4d;
+  --deep-void: #0a0a12;
+  --iron: #d1ccc0;
+  --green: #27ae60;
+  --purple: #8e44ad;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+  background: var(--deep-void);
+  color: #fff;
+  height: 100%;
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+/* ==========================================================================
+   2. UTILITIES & GLOBAL LAYOUT
+   ========================================================================== */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--deep-void);
+  transition: 0.35s ease;
+  z-index: 10;
+  padding: 20px;
+}
+
+.hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+.brand-title {
+  font-family: 'Cinzel', serif;
+  font-size: 5rem;
+  background: linear-gradient(to bottom, #fff, var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 10px;
+}
+
+.title-glow {
+  animation: glowPulse 2s infinite alternate;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--iron);
+  font-size: 1.2rem;
+}
+
+/* ==========================================================================
+   3. INTRO SECTION
+   ========================================================================== */
+.intro-t {
+  font-family: 'Cinzel', serif;
+  font-size: 3rem;
+  color: var(--iron);
+  text-align: center;
+  opacity: 0;
+  transition: 1.2s;
+}
+
+.intro-t.gold {
+  color: var(--gold);
+  font-size: 3.5rem;
+}
+
+.intro-actions {
+  width: min(700px, 90vw);
+  opacity: 0;
+  transition: 1s;
+  margin-top: 25px;
+}
+
+/* ==========================================================================
+   4. PANELS & INPUTS
+   ========================================================================== */
+.stone-panel {
+  background: linear-gradient(145deg, #1e272e, #000);
+  border: 4px solid #34495e;
+  padding: 32px;
+  border-radius: 12px;
+  width: 85%;
+  max-width: 900px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.stone-panel.compact {
+  max-width: 650px;
+}
+
+.stone-panel.center {
+  text-align: center;
+}
+
+.stone-panel label {
+  display: block;
+  font-family: 'Cinzel';
+  color: var(--iron);
+  margin: 10px 0 7px;
+}
+
+.game-select,
+.text-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1.05rem;
+  color: #fff;
+  background: linear-gradient(145deg, #1c1c2b, #000);
+  border: 2px solid var(--gold-dark);
+  border-radius: 10px;
+  outline: none;
+  margin-bottom: 7px;
+}
+
+.text-input:focus,
+.game-select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 15px rgba(255, 207, 64, 0.35);
+}
+
+.code-input {
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 7px;
+  font-family: 'Cinzel';
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   5. BUTTONS
+   ========================================================================== */
+.btn-action {
+  background: linear-gradient(135deg, #c0392b, #8e0000);
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  border: none;
+  padding: 17px 30px;
+  font-size: 1.55rem;
+  cursor: pointer;
+  clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%);
+  transition: 0.25s;
+  width: 100%;
+  margin-top: 15px;
+}
+
+.btn-action:hover {
+  transform: scale(1.015);
+  filter: brightness(1.18);
+}
+
+.btn-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid #555;
+  color: var(--iron);
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 8px 4px;
+}
+
+.btn-secondary:hover {
+  border-color: var(--gold);
+  color: #fff;
+}
+
+.btn-secondary.wide {
+  width: 100%;
+  margin: 10px 0;
+}
+
+/* ==========================================================================
+   6. ROLE SELECTION & CARDS
+   ========================================================================== */
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(250px, 360px));
+  gap: 25px;
+  margin: 25px 0;
+}
+
+.role-card {
+  background: linear-gradient(145deg, #1e272e, #000);
+  border: 3px solid #34495e;
+  border-radius: 15px;
+  color: #fff;
+  padding: 30px;
+  cursor: pointer;
+  text-align: left;
+  transition: 0.25s;
+}
+
+.role-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-4px);
+  box-shadow: 0 0 25px rgba(255, 207, 64, 0.18);
+}
+
+.role-card span {
+  display: block;
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.role-card b {
+  display: block;
+  font-family: 'Cinzel';
+  font-size: 1.25rem;
+  color: var(--gold);
+}
+
+.role-card small {
+  display: block;
+  color: var(--iron);
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.demo-note {
+  color: #9c9c9c;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+  margin-top: 15px;
+}
+
+/* ==========================================================================
+   7. LOBBY & ROOM CODE
+   ========================================================================== */
+.room-code {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  background: linear-gradient(145deg, #171722, #000);
+  border: 3px solid var(--gold-dark);
+  border-radius: 15px;
+  padding: 15px 30px;
+  margin: 10px 0;
+}
+
+.room-code span {
+  color: var(--iron);
+  font-family: 'Cinzel';
+}
+
+.room-code b {
+  font-family: 'Cinzel';
+  font-size: 2.2rem;
+  color: var(--gold);
+  letter-spacing: 6px;
+}
+
+.lobby-hint {
+  color: var(--iron);
+  margin: 0 0 15px;
+}
+
+.lobby-panel {
+  max-width: 850px;
+}
+
+.lobby-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Cinzel';
+  font-size: 1.1rem;
+  color: var(--gold);
+  border-bottom: 1px solid #444;
+  padding-bottom: 12px;
+}
+
+.player-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 15px 0;
+  min-height: 80px;
+}
+
+.player-chip {
+  padding: 12px;
+  border: 2px solid #444;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.player-chip .dot {
+  color: var(--green);
+}
+
+.host-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.host-actions .btn-action {
+  flex: 1;
+  min-width: 260px;
+}
+
+.status-text {
+  text-align: center;
+  color: var(--gold);
+  min-height: 24px;
+  margin-top: 12px;
+}
+
+.waiting-avatar {
+  font-size: 4rem;
+}
+
+.role-status {
+  display: inline-block;
+  border: 1px solid var(--gold-dark);
+  color: var(--gold);
+  border-radius: 20px;
+  padding: 8px 15px;
+  font-family: 'Cinzel';
+  font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   8. FIXED CONTROLS & BADGES
+   ========================================================================== */
+.sound-toggle {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--gold-dark);
+  color: #fff;
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.host-badge {
+  position: fixed;
+  top: 18px;
+  right: 78px;
+  z-index: 3000;
+  border: 1px solid #555;
+  border-radius: 20px;
+  padding: 8px 14px;
+  color: var(--iron);
+  font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.btn-pause {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--gold-dark);
+  color: #fff;
+  font-family: 'Cinzel';
+  padding: 10px 16px;
+  border-radius: 30px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   9. ARENA & QUESTION SCREEN
+   ========================================================================== */
+.arena-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 25px;
+  width: 95%;
+  max-width: 1500px;
+  align-items: stretch;
+}
+
+.warrior-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border: 4px solid #444;
+  border-radius: 20px;
+  text-align: center;
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.king-card {
+  border-color: var(--gold);
+}
+
+.challenger-card {
+  border-color: var(--blood);
+}
+
+.warrior-role {
+  font-family: 'Cinzel';
+  font-size: 1.1rem;
+  color: var(--iron);
+  margin-bottom: 12px;
+}
+
+.warrior-name {
+  font-size: 2rem;
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+.warrior-score {
+  font-size: 4rem;
+  font-family: 'Cinzel';
+  margin: 8px 0;
+}
+
+.king-score {
+  color: var(--gold);
+}
+
+.chal-score {
+  color: var(--blood);
+}
+
+.mobile-answer-note {
+  font-size: 0.9rem;
+  color: #888;
+  margin-top: 10px;
+}
+
+.q-card {
+  background: #fdf2e9;
+  color: #2d3436;
+  padding: 35px;
+  border: 10px ridge var(--purple);
+  border-radius: 10px;
+  text-align: center;
+  min-height: 350px;
+}
+
+.round-info {
+  font-weight: bold;
+  color: var(--purple);
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.q-card #q-text {
+  font-size: 2.35rem;
+  line-height: 1.25;
+  font-weight: 700;
+  margin: 20px 0;
+}
+
+.q-card #opt-text {
+  font-size: 1.35rem;
+  text-align: left;
+  line-height: 1.55;
+}
+
+.arena-status {
+  margin-top: 18px;
+  padding: 10px;
+  background: rgba(142, 68, 173, 0.12);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #6c3483;
+}
+
+.pad-grid {
+  display: none;
+}
+
+/* ==========================================================================
+   10. PROGRESS, TIMER & NEXT-UP
+   ========================================================================== */
+#progress-wrap {
+  width: 95%;
+  max-width: 1500px;
+  margin: 0 auto 12px;
+  text-align: center;
+}
+
+#progress-text {
+  font-family: 'Cinzel';
+  color: var(--iron);
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+#progress-bar-outer {
+  width: 100%;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #444;
+}
+
+#progress-bar-inner {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+  transition: width 0.4s;
+}
+
+.timer-bar {
+  width: 100%;
+}
+
+#timer-bar-outer {
+  width: 100%;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+#timer-bar-inner {
+  height: 100%;
+  width: 100%;
+  background: #27ae60;
+  transition: width 1s linear, background-color 1s linear;
+}
+
+.timer-warn {
+  background: #f39c12 !important;
+}
+
+.timer-danger {
+  background: var(--blood) !important;
+}
+
+#next-up-wrap {
+  width: 95%;
+  max-width: 1500px;
+  margin: 18px auto 0;
+  text-align: center;
+}
+
+#next-up-title {
+  font-family: 'Cinzel';
+  color: var(--iron);
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+#next-up-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.next-up-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid #444;
+  border-radius: 30px;
+  padding: 7px 15px;
+  font-family: 'Cinzel';
+  font-size: 0.9rem;
+  color: var(--iron);
+}
+
+.next-up-chip.next-up-soon {
+  border-color: var(--gold-dark);
+  color: #fff;
+}
+
+/* ==========================================================================
+   11. RESULTS, OVERLAYS & ALERTS
+   ========================================================================== */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+}
+
+.roast-text {
+  font-style: italic;
+  color: var(--iron);
+  font-size: 2rem;
+  margin-top: 20px;
+  max-width: 900px;
+  line-height: 1.4;
+}
+
+.alert-box {
+  border: 3px solid var(--gold);
+  padding: 35px;
+  border-radius: 15px;
+  max-width: 650px;
+  text-align: center;
+  background: #050509;
+}
+
+.alert-box h1 {
+  font-family: 'Cinzel';
+  color: var(--gold);
+  font-size: 2.5rem;
+  margin: 0 0 12px;
+}
+
+.alert-box p {
+  font-size: 1.2rem;
+}
+
+.medal-box {
+  margin: 8px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  width: min(650px, 90vw);
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Cinzel';
+  font-size: 1.4rem;
+}
+
+.rank-1 {
+  background: linear-gradient(90deg, #ffd700, #b8860b);
+  color: #000;
+}
+
+.rank-2 {
+  background: linear-gradient(90deg, #e0e0e0, #7f8c8d);
+  color: #000;
+}
+
+.rank-3 {
+  background: linear-gradient(90deg, #cd7f32, #8e4e14);
+}
+
+.rank-none {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #444;
+}
+
+#alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.95), #000);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: 0.3s;
+}
+
+#alert-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+#pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   12. PLAYER ANSWER SCREEN (MOBILE / CONTROLLER)
+   ========================================================================== */
+.player-answer-screen {
+  justify-content: flex-start;
+  padding: 20px;
+  overflow: auto;
+}
+
+.player-top {
+  width: min(600px, 100%);
+  display: flex;
+  justify-content: space-between;
+  color: var(--gold);
+  font-family: 'Cinzel';
+  padding: 10px 0;
+}
+
+.player-identity {
+  width: min(600px, 100%);
+  border: 2px solid #444;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-identity span {
+  font-size: 2.5rem;
+}
+
+.player-identity b {
+  font-family: 'Cinzel';
+  color: var(--gold);
+}
+
+.player-identity strong {
+  font-size: 1.5rem;
+}
+
+.player-question-mini {
+  width: min(600px, 100%);
+  padding: 16px;
+  margin: 15px 0;
+  text-align: center;
+  color: var(--iron);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+.player-timer {
+  width: 90px;
+  height: 90px;
+  border: 4px solid var(--gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel';
+  font-size: 2rem;
+  margin: 5px 0 18px;
+}
+
+.answer-grid {
+  width: min(600px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.answer-grid button {
+  height: 125px;
+  border: 4px solid #1a252f;
+  border-radius: 15px;
+  font-family: 'Cinzel';
+  font-size: 3rem;
+  color: #fff;
+  background: #2c3e50;
+  cursor: pointer;
+}
+
+.answer-grid button:hover {
+  filter: brightness(1.2);
+}
+
+.answer-grid button:disabled {
+  opacity: 0.45;
+}
+
+.answer-grid button.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 25px rgba(255, 207, 64, 0.5);
+}
+
+.player-answer-status {
+  width: min(600px, 100%);
+  text-align: center;
+  color: var(--iron);
+  margin-top: 18px;
+  font-size: 1.1rem;
+  min-height: 30px;
+}
+
+/* ==========================================================================
+   13. ANIMATIONS & EFFECTS
+   ========================================================================== */
+@keyframes glowPulse {
+  from {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  }
+  to {
+    text-shadow: 0 0 25px rgba(255, 207, 64, 0.8);
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  opacity: 0.95;
+  animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.4;
+  }
+}
+
+#confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1500;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   14. MEDIA QUERIES (RESPONSIVE)
+   ========================================================================== */
+@media (max-width: 1000px) {
+  .arena-grid {
+    grid-template-columns: 200px 1fr 200px;
+    gap: 12px;
+  }
+
+  .q-card #q-text {
+    font-size: 1.7rem;
+  }
+
+  .q-card #opt-text {
+    font-size: 1rem;
+  }
+
+  .warrior-name {
+    font-size: 1.4rem;
+  }
+
+  .warrior-score {
+    font-size: 3rem;
+  }
+
+  .warrior-card {
+    padding: 15px;
+  }
+
+  .brand-title {
+    font-size: 3.5rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .role-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-title {
+    font-size: 2.7rem;
+    letter-spacing: 4px;
+  }
+
+  .intro-t {
+    font-size: 2rem;
+  }
+
+  .intro-t.gold {
+    font-size: 2.3rem;
+  }
+
+  .stone-panel {
+    width: 95%;
+    padding: 22px;
+  }
+
+  .arena-grid {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .warrior-card {
+    min-height: 120px;
+  }
+
+  .q-card {
+    order: -1;
+    min-height: auto;
+  }
+
+  .host-badge {
+    top: 72px;
+    right: 15px;
+  }
+
+  .arena-grid .warrior-card {
+    display: flex;
+  }
+
+  .room-code {
+    gap: 10px;
+    padding: 12px 18px;
+  }
+
+  .room-code b {
+    font-size: 1.6rem;
+  }
+
+  .answer-grid button {
+    height: 105px;
+  }
+
+  .host-actions {
+    display: block;
+  }
+}
