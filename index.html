@@ -71,6 +71,10 @@ input{padding:14px;font-size:1.1rem;border-radius:8px;border:2px solid var(--gol
 </div>
 
 <div id="s-host-game" class="screen">
+  <div id="h-roulette" style="display:none;">
+    <h2 style="color:var(--gold)">🎲 MEMILIH RAJA...</h2>
+    <div id="h-roulette-name" style="font-size:3rem;font-family:Georgia,serif;"></div>
+  </div>
   <div id="h-duel" style="display:none;width:100%;">
     <div id="h-qnum" style="color:var(--gold)"></div>
     <div class="timerbar"><div id="h-timerfill" class="timerfill"></div></div>
@@ -86,6 +90,7 @@ input{padding:14px;font-size:1.1rem;border-radius:8px;border:2px solid var(--gol
   <div id="h-reveal" style="display:none;">
     <h2 id="h-correct" style="color:#27ae60;"></h2>
     <h2 id="h-winner" style="color:var(--gold);"></h2>
+    <p id="h-roast" style="font-style:italic;color:#ccc;max-width:700px;"></p>
     <button class="btn" onclick="hostNextDuel()">LANJUT ➡️</button>
   </div>
   <div id="h-podium" style="display:none;">
@@ -176,6 +181,19 @@ const QUESTIONS = [
 const TIME_LIMIT = 15000;
 const MAX_PLAYERS = 15;
 
+const ROASTS = {
+  kingWins: ["Tahta ini terlalu tinggi buatmu, ${target}!", "Minggir kamu ${target}! Raja tak terkalahkan.", "Cuma segitu kemampuanmu, ${target}?"],
+  chalWins: ["Raja baru telah tiba! Turun kamu ${target}!", "Payah kamu ${target}, tahta ini milikku!", "Rakyat bosan denganmu, ${target}!"],
+  audienceRoast: ["Penonton kecewa! ${k} dan ${c} sama-sama zonk!", "Mending kalian berdua pulang aja!", "Dewa pun geleng-geleng melihat ${k} dan ${c}."]
+};
+function getTitle(i, s){
+  if(s===0) return "TAWANAN ARENA ⛓️";
+  if(i===0) return "KAISAR ARENA 👑";
+  if(i===1) return "GLADIATOR ULUNG ⚔️";
+  if(i===2) return "PRAJURIT TANGGUH 🛡️";
+  return "RAKYAT JELATA 📯";
+}
+
 let myRole, myRoomCode, myId, myName='', myScore=0;
 let lastPhase=null, lastQIndex=-1, lastKing=null, timerInt=null, revealing=false;
 let activeUnsubs = [];
@@ -244,6 +262,7 @@ function renderHost(){
   if(g.phase!==lastPhase || g.qIndex!==lastQIndex || g.king!==lastKing){
     lastPhase=g.phase; lastQIndex=g.qIndex; lastKing=g.king; clearInterval(timerInt); timerInt=null; revealing=false;
   }
+  document.getElementById('h-roulette').style.display = g.phase==='rouletting'?'block':'none';
   document.getElementById('h-duel').style.display = g.phase==='dueling'?'block':'none';
   document.getElementById('h-reveal').style.display = g.phase==='reveal'?'block':'none';
   document.getElementById('h-podium').style.display = g.phase==='podium'?'block':'none';
@@ -277,13 +296,22 @@ function renderHost(){
     document.getElementById('h-correct').innerText = `Jawaban benar: ${getOptions(g.qIndex)[ci]}`;
     const chalId = g.queue[0];
     let winText = 'SERI — dua-duanya salah / waktu habis';
-    if(g.winnerSide==='king') winText = `👑 ${nameOf(players,g.king)} BERTAHAN!`;
-    else if(g.winnerSide==='chal') winText = `⚔️ ${nameOf(players,chalId)} MEREBUT TAHTA!`;
+    let roast;
+    if(g.winnerSide==='king'){
+      winText = `👑 ${nameOf(players,g.king)} BERTAHAN!`;
+      roast = ROASTS.kingWins[g.qIndex % ROASTS.kingWins.length].replace('${target}', nameOf(players,chalId));
+    } else if(g.winnerSide==='chal'){
+      winText = `⚔️ ${nameOf(players,chalId)} MEREBUT TAHTA!`;
+      roast = ROASTS.chalWins[g.qIndex % ROASTS.chalWins.length].replace('${target}', nameOf(players,g.king));
+    } else {
+      roast = ROASTS.audienceRoast[g.qIndex % ROASTS.audienceRoast.length].replace('${k}',nameOf(players,g.king)).replace('${c}',nameOf(players,chalId));
+    }
     document.getElementById('h-winner').innerText = winText;
+    document.getElementById('h-roast').innerText = '"'+roast+'"';
   }
   if(g.phase==='podium'){
     const sorted=[...players].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,5);
-    document.getElementById('h-podium-list').innerHTML = sorted.map((p,i)=>`<div><span>#${i+1} ${p.name}</span><span>${p.score||0} pt</span></div>`).join('');
+    document.getElementById('h-podium-list').innerHTML = sorted.map((p,i)=>`<div><span>${getTitle(i,p.score||0)}: ${p.name}</span><span>${p.score||0} pt</span></div>`).join('');
   }
 }
 
@@ -294,11 +322,34 @@ async function startGame(){
   const king = ids[kIdx];
   const queue = ids.filter((id,i)=>i!==kIdx).sort(()=>Math.random()-0.5);
   await setDoc(roomDoc(myRoomCode), {
-    phase:'dueling', king, queue, currentRound:1, maxRounds:3, duelCount:0,
-    qIndex: Math.floor(Math.random()*QUESTIONS.length),
-    startAt: Date.now(), timeLimit: TIME_LIMIT,
+    phase:'rouletting', king, queue, currentRound:1, maxRounds:3, duelCount:0,
     duelAnswers:{king:null,chal:null}, winnerSide:null
   });
+  runRoulette(king);
+}
+
+function runRoulette(kingId){
+  const players = window.__players || [];
+  const names = players.map(p=>p.name);
+  const el = document.getElementById('h-roulette-name');
+  el.style.color = '#fff';
+  let i = 0;
+  const spin = setInterval(()=>{
+    el.innerText = names[Math.floor(Math.random()*names.length)];
+    i++;
+    if(i>18){
+      clearInterval(spin);
+      el.innerText = '👑 '+nameOf(players,kingId);
+      el.style.color = 'var(--gold)';
+      setTimeout(async ()=>{
+        await setDoc(roomDoc(myRoomCode), {
+          ...window.__game, phase:'dueling',
+          qIndex: Math.floor(Math.random()*QUESTIONS.length),
+          startAt: Date.now(), timeLimit: TIME_LIMIT
+        });
+      }, 1200);
+    }
+  }, 120);
 }
 
 async function hostNextDuel(){
@@ -366,6 +417,11 @@ async function joinGame(){
     renderPlayer();
   });
   activeUnsubs.push(unsubMe);
+  const unsubAll = onSnapshot(playersCol(myRoomCode), snap=>{
+    window.__players = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderPlayer();
+  });
+  activeUnsubs.push(unsubAll);
 }
 
 function renderPlayer(){
@@ -376,7 +432,9 @@ function renderPlayer(){
   const mySide = amKing ? 'king' : (amChal ? 'chal' : null);
   const myAnswer = mySide && g.duelAnswers ? g.duelAnswers[mySide] : null;
 
-  document.getElementById('p-wait').style.display = g.phase==='lobby' ? 'block':'none';
+  document.getElementById('p-wait').style.display = (g.phase==='lobby'||g.phase==='rouletting') ? 'block':'none';
+  if(g.phase==='rouletting') document.querySelector('#p-wait h2').innerText = '🎲 Host sedang memilih Raja...';
+  else document.querySelector('#p-wait h2').innerText = 'Menunggu host memulai...';
   document.getElementById('p-question').style.display = (g.phase==='dueling' && inDuel && !myAnswer) ? 'block':'none';
   document.getElementById('p-waiting-reveal').style.display = (g.phase==='dueling' && (!inDuel || myAnswer)) ? 'block':'none';
   document.getElementById('p-reveal').style.display = g.phase==='reveal' ? 'block':'none';
@@ -405,7 +463,11 @@ function renderPlayer(){
     document.getElementById('p-score2').innerText = 'Total skor: '+myScore;
   }
   if(g.phase==='podium'){
-    document.getElementById('p-rank').innerText = 'Skor akhir kamu: '+myScore+' poin';
+    const players = window.__players || [];
+    const sorted = [...players].sort((a,b)=>(b.score||0)-(a.score||0));
+    const myRank = sorted.findIndex(p=>p.id===myId);
+    const title = myRank>=0 ? getTitle(myRank, myScore) : '';
+    document.getElementById('p-rank').innerText = `${title} — Skor akhir: ${myScore} poin (peringkat #${myRank+1})`;
   }
 }
 
