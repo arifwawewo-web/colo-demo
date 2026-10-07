@@ -765,6 +765,28 @@ select {
   line-height: 1.4;
 }
 
+.feedback-kicker {
+  font-family: 'Cinzel';
+  font-size: 1.1rem;
+  letter-spacing: 4px;
+  color: var(--gold);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.feedback-winner {
+  font-family: 'Cinzel';
+  font-size: 1.25rem;
+  color: var(--gold);
+  margin-top: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.result-overlay .roast-text {
+  animation: roastPop 0.35s ease-out both;
+}
+
 .alert-box {
   border: 3px solid var(--gold);
   padding: 35px;
@@ -844,7 +866,34 @@ select {
 }
 
 /* ==========================================================================
-   13. PLAYER ANSWER SCREEN (MOBILE / CONTROLLER)
+   13. FINAL RANKING PANEL
+   ========================================================================== */
+.final-panel {
+  max-width: 900px;
+  width: min(94vw, 900px);
+  text-align: center;
+}
+
+.final-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-height: 58vh;
+  overflow: auto;
+  margin: 18px 0 24px;
+}
+
+.final-ranking-list .medal-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
+}
+
+/* ==========================================================================
+   14. PLAYER ANSWER SCREEN (MOBILE / CONTROLLER)
    ========================================================================== */
 .player-answer-screen {
   justify-content: flex-start;
@@ -950,7 +999,7 @@ select {
 }
 
 /* ==========================================================================
-   14. ANIMATIONS & EFFECTS
+   15. ANIMATIONS & KEYFRAMES
    ========================================================================== */
 @keyframes glowPulse {
   from {
@@ -958,6 +1007,17 @@ select {
   }
   to {
     text-shadow: 0 0 25px rgba(255, 207, 64, 0.8);
+  }
+}
+
+@keyframes roastPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -988,7 +1048,7 @@ select {
 }
 
 /* ==========================================================================
-   15. MEDIA QUERIES (RESPONSIVE)
+   16. MEDIA QUERIES (RESPONSIVE)
    ========================================================================== */
 @media (max-width: 1000px) {
   .arena-grid {
@@ -1104,5 +1164,20 @@ select {
   .roulette-strip span {
     width: 150px;
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .final-panel {
+    padding: 18px;
+  }
+
+  .final-ranking-list {
+    max-height: none;
+  }
+
+  .final-ranking-list .medal-box {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
