@@ -28,7 +28,7 @@ const App = {
   mode:null, peer:null, roomCode:null, hostConn:null, connections:new Map(),
   hostState:{players:[],king:null,queue:[],scores:{},round:1,maxRounds:2,duelIndex:0,question:null,options:[],answerLetter:null,timeLeft:12,answered:{king:false,chal:false},timer:null,locked:false,materi:'Aqidah',kelas:'5',semester:'1',phase:'lobby',paused:false},
   player:{name:'',role:null},
-  roasts:{kingWins:['Tahta ini terlalu tinggi buatmu, ${target}!','Minggir kamu ${target}! Raja tak terkalahkan.','Cuma segitu kemampuanmu, ${target}?'],chalWins:['Raja baru telah tiba! Turun kamu ${target}!','Payah kamu ${target}, tahta ini milikku!','Rakyat bosan denganmu, ${target}!'],audience:['Penonton kecewa! ${k} dan ${c} sama-sama zonk!','Mending kalian berdua pulang aja!','Dewa pun geleng-geleng melihat ${k} dan ${c}.']},
+  roasts:{kingWins:['Gladiator ${target}, tahta ini bukan untukmu! Raja masih terlalu kuat.','${target}, latihan lagi! Kau belum pantas merebut mahkota Raja.','Cuma begitu kemampuanmu, ${target}? Raja masih berdiri tegak!'],chalWins:['Raja ${target}, turun dari tahta! Mahkota sekarang milikku!','Payah sekali, ${target}! Tahta ini sudah berpindah tangan.','Raja ${target}, rakyat memilih pemenang baru!'],audience:['DEWA KECEWA! ${k} dan ${c} sama-sama membuat duel ini memalukan.','Apa yang kalian lakukan, ${k} dan ${c}? Dewa sampai geleng-geleng kepala!','Duel macam apa ini? ${k} dan ${c} sama-sama mengecewakan para dewa!']},
 
   init(){
     this.bind();
@@ -110,18 +110,28 @@ const App = {
     const active=isKing||isChal;
     this.player.role=isKing?'king':isChal?'chal':'spectator';
     $('player-role-icon').textContent=isKing?'👑':isChal?'⚔️':'👥';
-    $('player-role-title').textContent=isKing?'RAJA':isChal?'PENANTANG':'PENONTON / ANTREAN';
+    $('player-role-title').textContent=isKing?'RAJA':isChal?'PENANTANG':'MENUNGGU GILIRAN';
     $('player-question-mini').textContent=active
       ? 'DUEL AKTIF — Soal ada di layar utama. Jawab dari perangkatmu.'
-      : `KAMU BELUM BERTANDING. ${m.king} (Raja) vs ${m.chal} (Penantang). Tunggu giliranmu.`;
+      : 'SEDANG MENUNGGU GILIRAN MELAWAN RAJA';
     document.querySelectorAll('.answer-grid button').forEach(b=>{b.disabled=!active;b.classList.remove('selected')});
-    $('player-answer-status').textContent=active?'Pilih jawaban A, B, C, atau D.':'👀 Kamu menonton duel dan menunggu masuk antrean.';
+    $('player-answer-status').textContent=active?'Pilih jawaban A, B, C, atau D.':'SEDANG MENUNGGU GILIRAN MELAWAN RAJA';
     this.show('screen-player-answer');
   },
   playerTimer(t){$('player-time').textContent=Math.max(0,t);if(this.player.role) document.querySelector('.player-timer').style.borderColor=t<=3?'var(--blood)':'var(--gold)'},
   playerAnswer(answer){if(!this.hostConn||!['king','chal'].includes(this.player.role))return;document.querySelectorAll('.answer-grid button').forEach(b=>b.disabled=true);$('player-answer-status').textContent='Jawaban terkirim: '+answer;this.hostConn.send({type:'answer',name:this.player.name,answer})},
-  showPlayerFeedback(m){$('player-answer-status').textContent=m.title+(m.winner?` • ${m.winner}`:'');document.querySelectorAll('.answer-grid button').forEach(b=>b.disabled=true)},
-  showPlayerFinal(m){this.showFinalRanking(m.sorted||[],false);},
+  showPlayerFeedback(m){
+    $('player-answer-status').textContent=m.title+(m.winner?` • ${m.winner}`:'');
+    document.querySelectorAll('.answer-grid button').forEach(b=>b.disabled=true);
+    const overlay=$('result-overlay');
+    if(!overlay)return;
+    const winnerLine=m.winner?`<div class="feedback-winner">🏆 PEMENANG: ${this.esc(m.winner)}</div>`:'';
+    overlay.innerHTML=`<div class="feedback-kicker">${this.esc(m.kicker||'⚔️ HASIL DUEL')}</div><h1 style="font-size:clamp(2.2rem,7vw,4rem);font-family:'Cinzel';color:white;margin:0">${this.esc(m.title||'HASIL PERTARUNGAN')}</h1>${winnerLine}<div class="roast-text">"${this.esc(m.roast||'Pertarungan selesai!')}"</div>`;
+    overlay.classList.remove('hidden');
+    clearTimeout(this.feedbackTimer);
+    this.feedbackTimer=setTimeout(()=>overlay.classList.add('hidden'),2700);
+  },
+  showPlayerFinal(m){this.renderFinalRanking(m.sorted||[]);this.show('screen-final');},
   showPlayerRoulette(m){this.renderRoulette(m.players||[],m.king);$('roulette-result').textContent='MENGACAK TAKDIR...';this.show('screen-roulette');setTimeout(()=>{$('roulette-result').textContent='👑 RAJA: '+(m.king||'-')},Math.max(1200,m.duration||3500));},
   showPlayerBriefing(m){this.renderBriefing(m.king,m.queue);$('brief-status').textContent='Menunggu host menekan MULAI DUEL...';$('btn-start-duel').classList.add('hidden');this.show('screen-briefing');},
   startOnlineGame(){
@@ -165,7 +175,7 @@ const App = {
   startHostTimer(){clearInterval(this.hostState.timer);this.hostState.timer=setInterval(()=>{if(this.hostState.locked)return;this.hostState.timeLeft--;this.updateArenaTimer();this.broadcast({type:'timer',time:this.hostState.timeLeft});if(this.hostState.timeLeft<=0){clearInterval(this.hostState.timer);this.hostState.locked=true;this.finishDuel(null,'WAKTU HABIS!')}},1000);this.updateArenaTimer()},
   updateArenaTimer(){const t=this.hostState.timeLeft;$('timer-bar-inner').style.width=(t/12*100)+'%';$('timer-bar-inner').classList.toggle('timer-warn',t<=6&&t>3);$('timer-bar-inner').classList.toggle('timer-danger',t<=3)},
   receiveAnswer(name,answer){const s=this.hostState;if(s.locked)return;const side=name===s.king?'king':name===s.chal?'chal':null;if(!side||s.answered[side])return;if(answer===s.answerLetter){s.locked=true;clearInterval(s.timer);s.scores[name]=(s.scores[name]||0)+10;Sound.correct();const loser=side==='king'?s.chal:s.king;this.finishDuel(side==='king'?s.king:s.chal,side==='king'?'RAJA BERTAHAN!':'TAHTA DIREBUT!',loser,side)}else{s.answered[side]=true;Sound.wrong();if(s.answered.king&&s.answered.chal){s.locked=true;clearInterval(s.timer);this.finishDuel(null,'SEMUA SALAH!')}}},
-  finishDuel(winner,title,loser,side){const s=this.hostState;let roast;if(winner){const list=side==='king'?this.roasts.kingWins:this.roasts.chalWins;roast=list[Math.floor(Math.random()*list.length)].replace('${target}',loser)}else roast=this.roasts.audience[Math.floor(Math.random()*this.roasts.audience.length)].replace('${k}',s.king).replace('${c}',s.chal);this.showResult(title,roast);this.broadcast({type:'feedback',title,roast,winner});setTimeout(()=>{if(side==='chal'){
+  finishDuel(winner,title,loser,side){const s=this.hostState;let roast,kicker;if(winner){const list=side==='king'?this.roasts.kingWins:this.roasts.chalWins;roast=list[Math.floor(Math.random()*list.length)].replaceAll('${target}',loser);kicker=side==='king'?`👑 RAJA ${winner} MEROSTING ⚔️ GLADIATOR ${loser}`:`⚔️ GLADIATOR ${winner} MEROSTING 👑 RAJA ${loser}`}else{roast=this.roasts.audience[Math.floor(Math.random()*this.roasts.audience.length)].replaceAll('${k}',s.king).replaceAll('${c}',s.chal);kicker=`⚡ DEWA KECEWA DENGAN DUEL 👑 ${s.king} VS ⚔️ ${s.chal}`}this.showResult(title,roast,kicker,winner);this.broadcast({type:'feedback',title,roast,winner,kicker});setTimeout(()=>{if(side==='chal'){
         // Penantang menang: ia naik menjadi Raja, Raja lama masuk ke belakang antrean.
         const oldKing=s.king;
         const newKing=s.queue.shift();
@@ -177,23 +187,36 @@ const App = {
         const defeatedChallenger=s.queue.shift();
         s.queue.push(defeatedChallenger);
       }if(s.duelIndex%s.queue.length===0)s.round++;this.beginDuel()},2800)},
-  showResult(title,roast){$('result-overlay').innerHTML=`<h1 style="font-size:4rem;font-family:'Cinzel';color:white;margin:0">${title}</h1><div class="roast-text">"${this.esc(roast)}"</div>`;$('result-overlay').classList.remove('hidden');setTimeout(()=>$('result-overlay').classList.add('hidden'),2700)},
+  showResult(title,roast,kicker,winner){const overlay=$('result-overlay');overlay.innerHTML=`<div class="feedback-kicker">${this.esc(kicker||'⚔️ HASIL DUEL')}</div><h1 style="font-size:clamp(2.2rem,7vw,4rem);font-family:'Cinzel';color:white;margin:0">${this.esc(title)}</h1>${winner?`<div class="feedback-winner">🏆 PEMENANG: ${this.esc(winner)}</div>`:''}<div class="roast-text">"${this.esc(roast)}"</div>`;overlay.classList.remove('hidden');clearTimeout(this.resultTimer);this.resultTimer=setTimeout(()=>overlay.classList.add('hidden'),2700)},
   finishGame(){
-    clearInterval(this.hostState.timer);this.hostState.phase='final';Sound.victory();
-    const sorted=Object.entries(this.hostState.scores).sort((a,b)=>b[1]-a[1]);const winner=sorted[0]?.[0];
-    this.showFinalRanking(sorted,true);this.broadcast({type:'final',winner,sorted});this.confetti();
+    const s=this.hostState;
+    clearInterval(s.timer);
+    s.timer=null;
+    s.phase='final';
+    Sound.victory();
+    const sorted=Object.entries(s.scores).sort((a,b)=>b[1]-a[1]);
+    const winner=sorted[0]?.[0]||'';
+    this.renderFinalRanking(sorted);
+    this.show('screen-final');
+    this.broadcast({type:'final',winner,sorted});
+    this.confetti();
   },
-  showFinalRanking(sorted,host=true){
+  renderFinalRanking(sorted){
     const titles=['KAISAR ARENA 👑','GLADIATOR ULUNG ⚔️','PRAJURIT TANGGUH 🛡️','PEJUANG ARENA 🔥','GLADIATOR BERANI 🗡️'];
-    let html='<div style="overflow:auto;width:100%;display:flex;flex-direction:column;align-items:center;max-height:75vh"><h1 class="brand-title" style="font-size:3rem">HASIL AKHIR</h1><p class="subtitle">Peringkat dan gelar para gladiator</p>';
-    sorted.forEach(([n,score],i)=>{const cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-none';html+=`<div class="medal-box ${cls}"><span><b>#${i+1}</b> ${titles[i]||'GLADIATOR'}: ${this.esc(n)}</span><span>${score} PT</span></div>`});
+    let html='<h1 class="brand-title" style="font-size:3rem">HASIL AKHIR</h1><p class="subtitle">PERINGKAT & GELAR PARA GLADIATOR</p><div class="final-ranking-list">';
+    sorted.forEach(([n,score],i)=>{
+      const cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-none';
+      html+=`<div class="medal-box ${cls}"><span><b>#${i+1}</b> ${titles[i]||'GLADIATOR'} — ${this.esc(n)}</span><span>${score} PT</span></div>`;
+    });
     html+='</div><button class="btn-action" id="return-role" style="width:min(500px,90vw)">KEMBALI KE PILIHAN HOST / PESERTA</button>';
-    $('result-overlay').innerHTML=html;$('result-overlay').classList.remove('hidden');$('return-role').onclick=()=>this.resetToRole();
+    $('final-content').innerHTML=html;
+    $('return-role').onclick=()=>this.resetToRole();
   },
+  showFinalRanking(sorted,host=true){this.renderFinalRanking(sorted);this.show('screen-final');},
   resetToRole(){
     clearInterval(this.hostState.timer);this.connections.forEach(c=>{try{c.close()}catch(e){}});this.connections.clear();try{this.peer?.destroy()}catch(e){}
     this.mode=null;this.peer=null;this.hostConn=null;this.roomCode=null;this.hostState={players:[],king:null,queue:[],scores:{},round:1,maxRounds:2,duelIndex:0,question:null,options:[],answerLetter:null,timeLeft:12,answered:{king:false,chal:false},timer:null,locked:false,materi:'Aqidah',kelas:'5',semester:'1',phase:'lobby',paused:false};
-    $('result-overlay').classList.add('hidden');$('pause-overlay')?.classList.add('hidden');$('btn-start-duel').disabled=false;$('btn-start-duel').classList.remove('hidden');this.show('screen-role');
+    $('result-overlay').classList.add('hidden');$('pause-overlay')?.classList.add('hidden');$('screen-final')?.classList.add('hidden');$('btn-start-duel').disabled=false;$('btn-start-duel').classList.remove('hidden');this.show('screen-role');
   },
   togglePause(){if(!this.hostState.timer)return;this.hostState.paused=!this.hostState.paused;if(this.hostState.paused){clearInterval(this.hostState.timer);$('pause-overlay').classList.remove('hidden');$('btn-pause').textContent='▶️ LANJUTKAN';this.broadcast({type:'paused'})}else{$('pause-overlay').classList.add('hidden');$('btn-pause').textContent='⏸ JEDA';this.startHostTimer()}},
   setJoinStatus(t){$('join-status').textContent=t},
