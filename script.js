@@ -42,11 +42,12 @@ const App = {
     $('create-room').onclick=()=>this.createRoom(); $('join-room').onclick=()=>this.joinRoom(); $('copy-room').onclick=()=>navigator.clipboard?.writeText(this.roomCode);
     $('close-room').onclick=()=>this.resetToRole(); $('solo-demo').onclick=()=>this.quickDemo(); $('start-online-game').onclick=()=>this.startOnlineGame(); $('btn-start-duel').onclick=()=>this.hostStartDuel();
     $('btn-sound').onclick=()=>{Sound.enabled=!Sound.enabled;$('btn-sound').innerText=Sound.enabled?'🔊':'🔇'};
+    $('demo-king-win').onclick=()=>this.demoRoast('king'); $('demo-chal-win').onclick=()=>this.demoRoast('chal'); $('demo-god').onclick=()=>this.demoRoast('god');
     $('close-alert').onclick=()=>this.closeAlert(); $('btn-pause').onclick=()=>this.togglePause();
     document.querySelectorAll('.answer-grid button').forEach(b=>b.onclick=()=>this.playerAnswer(b.dataset.answer));
   },
   quickDemo(){
-    this.mode='host'; this.roomCode='DEMO01'; this.hostState.players=['Budi','Siti','Andi','Rina']; this.hostState.scores=Object.fromEntries(this.hostState.players.map(n=>[n,0])); this.hostState.king='Budi'; this.hostState.queue=['Siti','Andi','Rina']; this.hostState.maxRounds=2; this.hostState.phase='lobby'; this.renderLobby(); this.show('screen-host-lobby');
+    this.mode='host'; this.roomCode='DEMO01'; this.hostState.players=['Budi','Siti','Andi','Rina']; this.hostState.scores=Object.fromEntries(this.hostState.players.map(n=>[n,0])); this.hostState.king='Budi'; this.hostState.queue=['Siti','Andi','Rina']; this.hostState.maxRounds=2; this.hostState.phase='lobby'; this.hostState.demo=true; this.renderLobby(); this.show('screen-host-lobby');
   },
   createRoom(){
     const name=($('host-name').value||'Narasumber').trim();
@@ -160,7 +161,8 @@ const App = {
   },
   hostStartDuel(){if(this.mode!=='host'||this.hostState.phase!=='briefing')return;$('btn-start-duel').disabled=true;$('brief-status').textContent='GERBANG DIBUKA — DUEL DIMULAI!';this.hostState.phase='battle';this.beginDuel();},
   beginDuel(){
-    const s=this.hostState;if(s.round>s.maxRounds)return this.finishGame();
+    const s=this.hostState;
+    $('demo-controls')?.classList.toggle('hidden', !s.demo);if(s.round>s.maxRounds)return this.finishGame();
     if(!s.queue.length)return this.finishGame();
     s.locked=false;s.answered={king:false,chal:false};
     // HANYA satu Penantang aktif pada setiap duel: orang pertama di antrean.
@@ -172,9 +174,9 @@ const App = {
   },
   renderArena(){const s=this.hostState;$('king-name').textContent=s.king;$('chal-name').textContent=s.chal;$('king-score').textContent=s.scores[s.king]||0;$('chal-score').textContent=s.scores[s.chal]||0;$('round-info').textContent=`PUTARAN ${s.round} - DUEL ${s.duelIndex}`;$('q-text').textContent=s.question.q;$('opt-text').innerHTML=s.options.map((o,i)=>`<div><b>${String.fromCharCode(65+i)}.</b> ${this.esc(o)}</div>`).join('');$('arena-status').textContent=`DUEL AKTIF: ${s.king} 👑 VS ${s.chal} ⚔️ — Peserta lain menunggu antrean.`;const total=s.maxRounds*s.queue.length; $('progress-text').textContent=`Duel ${s.duelIndex} / ${total}`;$('progress-bar-inner').style.width=Math.min(100,((s.duelIndex-1)/total)*100)+'%';$('next-up-list').innerHTML=s.queue.slice(1).map((n,i)=>`<div class="next-up-chip ${i===0?'next-up-soon':''}"><span style="color:var(--gold);font-weight:bold">#${i+1}</span> ${this.esc(n)}</div>`).join('')||'<div class="next-up-chip">— Duel terakhir di antrean —</div>';}
   ,
-  startHostTimer(){clearInterval(this.hostState.timer);this.hostState.timer=setInterval(()=>{if(this.hostState.locked)return;this.hostState.timeLeft--;this.updateArenaTimer();this.broadcast({type:'timer',time:this.hostState.timeLeft});if(this.hostState.timeLeft<=0){clearInterval(this.hostState.timer);this.hostState.locked=true;this.finishDuel(null,'WAKTU HABIS!')}},1000);this.updateArenaTimer()},
+  startHostTimer(){clearInterval(this.hostState.timer);this.hostState.timer=setInterval(()=>{if(this.hostState.locked)return;this.hostState.timeLeft--;this.updateArenaTimer();this.broadcast({type:'timer',time:this.hostState.timeLeft});if(this.hostState.timeLeft<=0){clearInterval(this.hostState.timer);this.hostState.locked=true;this.finishDuel(null,'DEWA KECEWA!')}},1000);this.updateArenaTimer()},
   updateArenaTimer(){const t=this.hostState.timeLeft;$('timer-bar-inner').style.width=(t/12*100)+'%';$('timer-bar-inner').classList.toggle('timer-warn',t<=6&&t>3);$('timer-bar-inner').classList.toggle('timer-danger',t<=3)},
-  receiveAnswer(name,answer){const s=this.hostState;if(s.locked)return;const side=name===s.king?'king':name===s.chal?'chal':null;if(!side||s.answered[side])return;if(answer===s.answerLetter){s.locked=true;clearInterval(s.timer);s.scores[name]=(s.scores[name]||0)+10;Sound.correct();const loser=side==='king'?s.chal:s.king;this.finishDuel(side==='king'?s.king:s.chal,side==='king'?'RAJA BERTAHAN!':'TAHTA DIREBUT!',loser,side)}else{s.answered[side]=true;Sound.wrong();if(s.answered.king&&s.answered.chal){s.locked=true;clearInterval(s.timer);this.finishDuel(null,'SEMUA SALAH!')}}},
+  receiveAnswer(name,answer){const s=this.hostState;if(s.locked)return;const side=name===s.king?'king':name===s.chal?'chal':null;if(!side||s.answered[side])return;if(answer===s.answerLetter){s.locked=true;clearInterval(s.timer);s.scores[name]=(s.scores[name]||0)+10;Sound.correct();const loser=side==='king'?s.chal:s.king;this.finishDuel(side==='king'?s.king:s.chal,side==='king'?'RAJA BERTAHAN!':'TAHTA DIREBUT!',loser,side)}else{s.answered[side]=true;Sound.wrong();if(s.answered.king&&s.answered.chal){s.locked=true;clearInterval(s.timer);this.finishDuel(null,'DEWA KECEWA!')}}},
   finishDuel(winner,title,loser,side){const s=this.hostState;let roast,kicker;if(winner){const list=side==='king'?this.roasts.kingWins:this.roasts.chalWins;roast=list[Math.floor(Math.random()*list.length)].replaceAll('${target}',loser);kicker=side==='king'?`👑 RAJA ${winner} MEROSTING ⚔️ GLADIATOR ${loser}`:`⚔️ GLADIATOR ${winner} MEROSTING 👑 RAJA ${loser}`}else{roast=this.roasts.audience[Math.floor(Math.random()*this.roasts.audience.length)].replaceAll('${k}',s.king).replaceAll('${c}',s.chal);kicker=`⚡ DEWA KECEWA DENGAN DUEL 👑 ${s.king} VS ⚔️ ${s.chal}`}this.showResult(title,roast,kicker,winner);this.broadcast({type:'feedback',title,roast,winner,kicker});setTimeout(()=>{if(side==='chal'){
         // Penantang menang: ia naik menjadi Raja, Raja lama masuk ke belakang antrean.
         const oldKing=s.king;
@@ -187,7 +189,15 @@ const App = {
         const defeatedChallenger=s.queue.shift();
         s.queue.push(defeatedChallenger);
       }if(s.duelIndex%s.queue.length===0)s.round++;this.beginDuel()},2800)},
-  showResult(title,roast,kicker,winner){const overlay=$('result-overlay');overlay.innerHTML=`<div class="feedback-kicker">${this.esc(kicker||'⚔️ HASIL DUEL')}</div><h1 style="font-size:clamp(2.2rem,7vw,4rem);font-family:'Cinzel';color:white;margin:0">${this.esc(title)}</h1>${winner?`<div class="feedback-winner">🏆 PEMENANG: ${this.esc(winner)}</div>`:''}<div class="roast-text">"${this.esc(roast)}"</div>`;overlay.classList.remove('hidden');clearTimeout(this.resultTimer);this.resultTimer=setTimeout(()=>overlay.classList.add('hidden'),2700)},
+  demoRoast(type){
+    const s=this.hostState;
+    if(this.mode!=='host'||!s.demo||s.phase!=='battle')return;
+    clearInterval(s.timer); s.locked=true;
+    if(type==='king'){s.scores[s.king]=(s.scores[s.king]||0)+10;this.finishDuel(s.king,'RAJA BERTAHAN!',s.chal,'king');}
+    else if(type==='chal'){s.scores[s.chal]=(s.scores[s.chal]||0)+10;this.finishDuel(s.chal,'TAHTA DIREBUT!',s.king,'chal');}
+    else{this.finishDuel(null,'DEWA KECEWA!',null,null);}
+  },
+  showResult(title,roast,kicker,winner){const overlay=$('result-overlay');if(!overlay)return;overlay.innerHTML=`<div class="feedback-kicker">${this.esc(kicker||'⚔️ HASIL DUEL')}</div><div class="feedback-title">${this.esc(title)}</div>${winner?`<div class="feedback-winner">🏆 PEMENANG: ${this.esc(winner)}</div>`:''}<div class="roast-label">🔥 ROASTING</div><div class="roast-text">“${this.esc(roast||'Duel ini membuat para dewa kecewa!')}”</div>`;overlay.classList.remove('hidden');overlay.style.display='flex';overlay.style.zIndex='9999';clearTimeout(this.resultTimer);this.resultTimer=setTimeout(()=>{overlay.classList.add('hidden');overlay.style.display='none'},5000)},
   finishGame(){
     const s=this.hostState;
     clearInterval(s.timer);
@@ -216,7 +226,7 @@ const App = {
   resetToRole(){
     clearInterval(this.hostState.timer);this.connections.forEach(c=>{try{c.close()}catch(e){}});this.connections.clear();try{this.peer?.destroy()}catch(e){}
     this.mode=null;this.peer=null;this.hostConn=null;this.roomCode=null;this.hostState={players:[],king:null,queue:[],scores:{},round:1,maxRounds:2,duelIndex:0,question:null,options:[],answerLetter:null,timeLeft:12,answered:{king:false,chal:false},timer:null,locked:false,materi:'Aqidah',kelas:'5',semester:'1',phase:'lobby',paused:false};
-    $('result-overlay').classList.add('hidden');$('pause-overlay')?.classList.add('hidden');$('screen-final')?.classList.add('hidden');$('btn-start-duel').disabled=false;$('btn-start-duel').classList.remove('hidden');this.show('screen-role');
+    $('result-overlay').classList.add('hidden');$('pause-overlay')?.classList.add('hidden');$('screen-final')?.classList.add('hidden');$('demo-controls')?.classList.add('hidden');$('btn-start-duel').disabled=false;$('btn-start-duel').classList.remove('hidden');this.show('screen-role');
   },
   togglePause(){if(!this.hostState.timer)return;this.hostState.paused=!this.hostState.paused;if(this.hostState.paused){clearInterval(this.hostState.timer);$('pause-overlay').classList.remove('hidden');$('btn-pause').textContent='▶️ LANJUTKAN';this.broadcast({type:'paused'})}else{$('pause-overlay').classList.add('hidden');$('btn-pause').textContent='⏸ JEDA';this.startHostTimer()}},
   setJoinStatus(t){$('join-status').textContent=t},
