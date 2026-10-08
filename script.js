@@ -1,934 +1,700 @@
-/* ==========================================================================
-   COLOSSEUM PAI — DEMO ONLINE V1
-   Multiplayer menggunakan PeerJS sebagai kanal P2P signaling/data.
-   Host memegang state permainan; peserta hanya mengirim jawaban.
-   ========================================================================== */
-
-const DEMO_QUESTIONS = [
-  { materi: 'Aqidah', kelas: '5', semester: '1', q: 'Rukun iman yang pertama adalah iman kepada...', a: 'Allah', o: ['Malaikat', 'Kitab', 'Rasul'] },
-  { materi: 'Aqidah', kelas: '5', semester: '1', q: 'Malaikat yang bertugas menyampaikan wahyu adalah...', a: 'Jibril', o: ['Mikail', 'Israfil', 'Izrail'] },
-  { materi: 'Akhlaq', kelas: '5', semester: '1', q: 'Sikap berkata sesuai kenyataan disebut...', a: 'Jujur', o: ['Sombong', 'Dengki', 'Lalai'] },
-  { materi: 'Al-Qur\'an', kelas: '5', semester: '1', q: 'Surah Al-Ikhlas menjelaskan tentang...', a: 'Keesaan Allah', o: ['Hukum waris', 'Kisah perang', 'Tata cara haji'] },
-  { materi: 'Fiqih', kelas: '5', semester: '1', q: 'Shalat wajib dalam sehari semalam berjumlah...', a: '5 waktu', o: ['3 waktu', '4 waktu', '6 waktu'] },
-  { materi: 'Tarikh', kelas: '5', semester: '1', q: 'Nabi Muhammad ﷺ hijrah dari Makkah menuju...', a: 'Madinah', o: ['Thaif', 'Syam', 'Yaman'] },
-  { materi: 'Aqidah', kelas: '5', semester: '1', q: 'Kitab yang diturunkan kepada Nabi Musa a.s. adalah...', a: 'Taurat', o: ['Zabur', 'Injil', 'Al-Qur\'an'] },
-  { materi: 'Akhlaq', kelas: '5', semester: '1', q: 'Menghormati orang tua merupakan contoh akhlak...', a: 'Terpuji', o: ['Tercela', 'Mubah', 'Makruh'] }
-];
-
-const $ = id => document.getElementById(id);
-
-const screens = [
-  'screen-intro',
-  'screen-role',
-  'screen-host-setup',
-  'screen-host-lobby',
-  'screen-player-join',
-  'screen-player-lobby',
-  'screen-roulette',
-  'screen-briefing',
-  'screen-battle',
-  'screen-player-answer'
-];
-
-/* ==========================================================================
-   SOUND SYSTEM
-   ========================================================================== */
+// --- SOUND EFFECTS (Web Audio API, tanpa file eksternal) ---
 const Sound = {
-  enabled: true,
-  ctx: null,
+    enabled: true,
+    ctx: null,
 
-  get() {
-    if (!this.ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-      this.ctx = new AC();
+    getCtx() {
+        if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AC();
+        }
+        return this.ctx;
+    },
+
+    tone(freq, duration, type = 'sine', delay = 0, gain = 0.2) {
+        if (!this.enabled) return;
+        try {
+            const ctx = this.getCtx();
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.connect(g);
+            g.connect(ctx.destination);
+            const startAt = ctx.currentTime + delay;
+            g.gain.setValueAtTime(gain, startAt);
+            g.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+            osc.start(startAt);
+            osc.stop(startAt + duration);
+        } catch (e) { /* audio diblokir browser, abaikan */ }
+    },
+
+    correct() {
+        this.tone(523.25, 0.15, 'triangle', 0);
+        this.tone(783.99, 0.2, 'triangle', 0.12);
+    },
+
+    wrong() {
+        this.tone(180, 0.3, 'sawtooth', 0, 0.15);
+    },
+
+    timeout() {
+        this.tone(140, 0.4, 'sawtooth', 0, 0.15);
+    },
+
+    kingChange() {
+        this.tone(392, 0.12, 'triangle', 0);
+        this.tone(523.25, 0.12, 'triangle', 0.13);
+        this.tone(659.25, 0.22, 'triangle', 0.26);
+    },
+
+    victory() {
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 0.25, 'triangle', i * 0.15));
+    },
+
+    toggle() {
+        this.enabled = !this.enabled;
+        const btn = document.getElementById('btn-sound');
+        if (btn) btn.innerText = this.enabled ? '🔊' : '🔇';
     }
-    return this.ctx;
-  },
-
-  tone(freq, duration, type = 'sine', delay = 0, gain = 0.12) {
-    if (!this.enabled) return;
-    try {
-      const c = this.get();
-      if (!c) return;
-
-      const o = c.createOscillator();
-      const g = c.createGain();
-
-      o.type = type;
-      o.frequency.value = freq;
-      o.connect(g);
-      g.connect(c.destination);
-
-      const t = c.currentTime + delay;
-      g.gain.setValueAtTime(gain, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      o.start(t);
-      o.stop(t + duration);
-    } catch (e) {
-      console.error(e);
-    }
-  },
-
-  correct() {
-    this.tone(523, 0.15, 'triangle');
-    this.tone(784, 0.2, 'triangle', 0.12);
-  },
-
-  wrong() {
-    this.tone(180, 0.3, 'sawtooth', 0, 0.1);
-  },
-
-  victory() {
-    [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.22, 'triangle', i * 0.12));
-  },
-
-  kingChange() {
-    [392, 523, 659].forEach((f, i) => this.tone(f, 0.13, 'triangle', i * 0.12));
-  }
 };
 
-/* ==========================================================================
-   MAIN APPLICATION ENGINE
-   ========================================================================== */
-const App = {
-  mode: null,
-  peer: null,
-  roomCode: null,
-  hostConn: null,
-  connections: new Map(),
+const Game = {
+    roasts: {
+        kingWins: [
+            "Tahta ini terlalu tinggi buatmu, ${target}!", 
+            "Minggir kamu ${target}! Raja tak terkalahkan.", 
+            "Cuma segitu kemampuanmu, ${target}?"
+        ],
+        chalWins: [
+            "Raja baru telah tiba! Turun kamu ${target}!", 
+            "Payah kamu ${target}, tahta ini milikku!", 
+            "Rakyat bosan denganmu, ${target}!"
+        ],
+        audienceRoast: [
+            "Penonton kecewa! ${k} dan ${c} sama-sama zonk!", 
+            "Mending kalian berdua pulang aja!", 
+            "Dewa pun geleng-geleng melihat ${k} dan ${c}."
+        ]
+    },
 
-  hostState: {
-    players: [],
-    king: null,
-    queue: [],
-    scores: {},
-    round: 1,
-    maxRounds: 2,
-    duelIndex: 0,
-    question: null,
-    options: [],
-    answerLetter: null,
-    timeLeft: 12,
-    answered: { king: false, chal: false },
-    timer: null,
-    locked: false,
-    materi: 'Aqidah',
-    kelas: '5',
-    semester: '1',
-    phase: 'lobby',
-    paused: false
-  },
+    db: [{ q: "Siapa kaisar pembangun Colosseum?", a: "Vespasianus", o: ["Nero", "Caesar", "Augustus"] }],
+    
+    state: { 
+        players: [], 
+        king: null, 
+        queue: [], 
+        scores: {}, 
+        currentRound: 1, 
+        maxRounds: 3, 
+        duelCount: 0, 
+        isLock: false, 
+        answered: { king: false, chal: false },
+        materi: null,
+        kelas: null,
+        semester: null,
+        filteredQuestions: [],
+        ansLet: null,
+        dataLoaded: false,
+        usedQuestions: [],
+        timeLimit: 12,
+        timeLeft: 12,
+        timerId: null,
+        isPaused: false,
+        pausedButtons: []
+    },
 
-  player: {
-    name: '',
-    role: null
-  },
+    // --- NAVIGATION ---
+    switchScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+        if (id === 'screen-intro') this.playIntro();
+    },
 
-  roasts: {
-    kingWins: [
-      'Gladiator ${target}, tahta ini bukan untukmu! Raja masih terlalu kuat.',
-      '${target}, latihan lagi! Kau belum pantas merebut mahkota Raja.',
-      'Cuma begitu kemampuanmu, ${target}? Raja masih berdiri tegak!'
-    ],
-    chalWins: [
-      'Raja ${target}, turun dari tahta! Mahkota sekarang milikku!',
-      'Payah sekali, ${target}! Tahta ini sudah berpindah tangan.',
-      'Raja ${target}, rakyat memilih pemenang baru!'
-    ],
-    audience: [
-      'DEWA KECEWA! ${k} dan${c} sama-sama membuat duel ini memalukan.',
-      'Apa yang kalian lakukan, ${k} dan${c}? Dewa sampai geleng-geleng kepala!',
-      'Duel macam apa ini? ${k} dan${c} sama-sama mengecewakan para dewa!'
-    ]
-  },
+    playIntro() {
+        setTimeout(() => document.getElementById('i1').style.opacity = "1", 1000);
+        setTimeout(() => document.getElementById('i2').style.opacity = "1", 2500);
+        setTimeout(() => document.getElementById('i3').style.opacity = "1", 4000);
+        setTimeout(() => document.getElementById('gb').style.opacity = "1", 5500);
+    },
 
-  /* ------------------------------------------------------------------------
-     INIT & NAVIGATION
-     ------------------------------------------------------------------------ */
-  init() {
-    this.bind();
-    setTimeout(() => {
-      ['i1', 'i2', 'i3'].forEach((id, i) => {
-        setTimeout(() => ($(id).style.opacity = 1), 1000 + i * 1500);
-      });
-      setTimeout(() => ($('intro-actions').style.opacity = 1), 5500);
-    }, 300);
-  },
+    // --- DATA & SELECTION ---
+    loadFromGSS() {
+        const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkQqLHfqQtnvAw5FB_Qfl7Gtg8G5w4KTkQWihrpHAakEDi42rFHYlW39AOM0DI1d2nvWfZ0BjRoPiE/pub?output=csv";
+        fetch(url)
+            .then(res => res.text())
+            .then(csv => {
+                const rows = csv.trim().split("\n").map(r => r.split(","));
+                rows.shift(); // Remove header
+                this.db = rows
+                    .map(r => ({
+                        kelas: (r[0] || "").trim(),
+                        semester: (r[1] || "").trim(),
+                        materi: (r[2] || "").trim(),
+                        q: (r[3] || "").trim(),
+                        a: (r[4] || "").trim(),
+                        o: [r[5], r[6], r[7]].map(x => (x || "").trim())
+                    }))
+                    // Buang baris kosong/rusak (misal baris kosong di akhir sheet)
+                    .filter(d => d.materi && d.kelas && d.semester && d.q && d.a);
 
-  show(id) {
-    screens.forEach(s => $(s).classList.add('hidden'));$(id).classList.remove('hidden');
-  },
+                this.state.dataLoaded = true;
+                this.enableLanjutButton();
+                this.refreshFilterOptions();
+                console.log("Soal berhasil dimuat:", this.db.length);
+            })
+            .catch(err => {
+                console.error("Gagal ambil GSS:", err);
+                const btn = document.getElementById('btn-lanjut');
+                if (btn) btn.innerText = "⚠️ GAGAL MEMUAT SOAL";
+                showAlert("ARENA BELUM SIAP", "Gagal mengambil soal. Cek koneksi internet, lalu muat ulang halaman (F5).");
+            });
+    },
 
-  bind() {
-    $('btn-open').onclick = () => this.show('screen-role');$('btn-quick-demo').onclick = () => this.quickDemo();
+    enableLanjutButton() {
+        const btn = document.getElementById('btn-lanjut');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "LANJUTKAN ⚔️";
+        }
+    },
 
-    $('choose-host').onclick = () => {
-      this.mode = 'host';
-      this.show('screen-host-setup');
-    };$('choose-player').onclick = () => {
-      this.mode = 'player';
-      this.show('screen-player-join');
-    };
+    // --- FILTER DINAMIS: cuma tampilkan opsi yang beneran ada soalnya (rekomendasi #2) ---
+    MATERI_ICONS: {
+        'aqidah': { icon: '🕌', label: 'Aqidah' },
+        'akhlaq': { icon: '✨', label: 'Akhlaq' },
+        'quran': { icon: '📖', label: "Al-Qur'an" },
+        "al-qur'an": { icon: '📖', label: "Al-Qur'an" },
+        'fiqih': { icon: '⚖️', label: 'Fiqih' },
+        'tarikh': { icon: '🏛️', label: 'Tarikh' }
+    },
 
-    $('back-role-1').onclick = () => this.show('screen-role');$('back-role-2').onclick = () => this.show('screen-role');
+    // Ambil subset db sesuai pilihan dropdown SAAT INI, kecuali dimensi "excluding"
+    // (dipakai supaya dropdown gak nge-filter dirinya sendiri)
+    getFilteredDb(excluding) {
+        const materiVal = document.getElementById('materi-select').value;
+        const kelasVal = document.getElementById('kelas-select').value;
+        const semesterVal = document.getElementById('semester-select').value;
 
-    $('create-room').onclick = () => this.createRoom();
-    $('join-room').onclick = () => this.joinRoom();$('copy-room').onclick = () => navigator.clipboard?.writeText(this.roomCode);
+        return this.db.filter(d => {
+            if (excluding !== 'materi' && materiVal && d.materi.toLowerCase() !== materiVal.toLowerCase()) return false;
+            if (excluding !== 'kelas' && kelasVal && String(d.kelas) !== kelasVal) return false;
+            if (excluding !== 'semester' && semesterVal && String(d.semester) !== semesterVal) return false;
+            return true;
+        });
+    },
 
-    $('close-room').onclick = () => this.resetToRole();$('solo-demo').onclick = () => this.quickDemo();
-    $('start-online-game').onclick = () => this.startOnlineGame();$('btn-start-duel').onclick = () => this.hostStartDuel();
+    refreshFilterOptions() {
+        if (!this.state.dataLoaded) return;
+        this.populateMateriOptions();
+        this.populateKelasOptions();
+        this.populateSemesterOptions();
+    },
 
-    $('btn-sound').onclick = () => {
-      Sound.enabled = !Sound.enabled;
-      $('btn-sound').innerText = Sound.enabled ? '🔊' : '🔇';
-    };
+    populateMateriOptions() {
+        const select = document.getElementById('materi-select');
+        const current = select.value;
+        const pool = this.getFilteredDb('materi');
 
-    $('close-alert').onclick = () => this.closeAlert();$('btn-pause').onclick = () => this.togglePause();
+        // Dedupe case-insensitive, pertahankan casing yang pertama muncul
+        const seen = {};
+        pool.forEach(d => { const k = d.materi.toLowerCase(); if (!seen[k]) seen[k] = d.materi; });
+        const distinct = Object.values(seen).sort();
 
-    document.querySelectorAll('.answer-grid button').forEach(b => {
-      b.onclick = () => this.playerAnswer(b.dataset.answer);
-    });
-  },
+        select.innerHTML = '<option value="">⚔️ Pilih Materi</option>' +
+            distinct.map(m => {
+                const meta = this.MATERI_ICONS[m.toLowerCase()] || { icon: '📚', label: m };
+                return `<option value="${m}">${meta.icon} ${meta.label}</option>`;
+            }).join('');
 
-  /* ------------------------------------------------------------------------
-     HOST / ROOM CREATION LOGIC
-     ------------------------------------------------------------------------ */
-  quickDemo() {
-    this.mode = 'host';
-    this.roomCode = 'DEMO01';
-    this.hostState.players = ['Budi', 'Siti', 'Andi', 'Rina'];
-    this.hostState.scores = Object.fromEntries(this.hostState.players.map(n => [n, 0]));
-    this.hostState.king = 'Budi';
-    this.hostState.queue = ['Siti', 'Andi', 'Rina'];
-    this.hostState.maxRounds = 2;
-    this.hostState.phase = 'lobby';
+        if (distinct.includes(current)) select.value = current;
+    },
 
-    this.renderLobby();
-    this.show('screen-host-lobby');
-  },
+    populateKelasOptions() {
+        const select = document.getElementById('kelas-select');
+        const current = select.value;
+        const pool = this.getFilteredDb('kelas');
+        const distinct = [...new Set(pool.map(d => String(d.kelas)))].sort((a, b) => Number(a) - Number(b));
 
-  createRoom() {
-    const name = ($('host-name').value || 'Narasumber').trim();
-    this.hostState.materi = $('materi-select').value;
-    this.hostState.kelas = $('kelas-select').value;
-    this.hostState.semester = $('semester-select').value;
-    this.hostState.maxRounds = Number($('ronde-select').value) || 2;
+        select.innerHTML = '<option value="">🎓 Pilih Kelas</option>' +
+            distinct.map(k => `<option value="${k}">Kelas ${k}</option>`).join('');
 
-    const code = this.makeCode();
-    this.roomCode = code;
+        if (distinct.includes(current)) select.value = current;
+    },
 
-    this.peer = new Peer('pai-' + code, { debug: 1 });
-    this.peer.on('open', () => {
-      this.renderLobby();
-      this.show('screen-host-lobby');
-    });
-    this.peer.on('connection', conn => this.handleHostConnection(conn));
-    this.peer.on('error', e => {
-      this.alert(
-        'KONEKSI HOST',
-        e.type === 'unavailable-id'
-          ? 'Kode room bentrok. Klik buat room lagi.'
-          : e.message || 'Koneksi PeerJS bermasalah.'
-      );
-    });
+    populateSemesterOptions() {
+        const select = document.getElementById('semester-select');
+        const current = select.value;
+        const pool = this.getFilteredDb('semester');
+        const distinct = [...new Set(pool.map(d => String(d.semester)))].sort();
 
-    this.hostState.hostName = name;
-  },
+        select.innerHTML = '<option value="">📅 Pilih Semester</option>' +
+            distinct.map(s => `<option value="${s}">Semester ${s}</option>`).join('');
 
-  makeCode() {
-    return 'PAI' + Math.random().toString(36).slice(2, 5).toUpperCase();
-  },
+        if (distinct.includes(current)) select.value = current;
+    },
 
-  handleHostConnection(conn) {
-    conn.on('open', () => {
-      this.connections.set(conn.peer, conn);
-      conn.on('data', m => this.handleHostMessage(conn, m));
-      conn.on('close', () => this.removePlayer(conn.peer));
-      conn.send({ type: 'hello', room: this.roomCode });
-    });
-  },
+    // Begitu satu dropdown dipilih, dua dropdown lainnya ikut nge-refresh
+    // supaya kombinasi yang gak punya soal gak bisa dipilih sama sekali
+    bindFilterListeners() {
+        const materiSelect = document.getElementById('materi-select');
+        const kelasSelect = document.getElementById('kelas-select');
+        const semesterSelect = document.getElementById('semester-select');
 
-  handleHostMessage(conn, m) {
-    if (!m || !m.type) return;
+        materiSelect.addEventListener('change', () => {
+            if (!this.state.dataLoaded) return;
+            this.populateKelasOptions();
+            this.populateSemesterOptions();
+        });
+        kelasSelect.addEventListener('change', () => {
+            if (!this.state.dataLoaded) return;
+            this.populateMateriOptions();
+            this.populateSemesterOptions();
+        });
+        semesterSelect.addEventListener('change', () => {
+            if (!this.state.dataLoaded) return;
+            this.populateMateriOptions();
+            this.populateKelasOptions();
+        });
+    },
 
-    if (m.type === 'join') {
-      const name = (m.name || 'Gladiator').trim().slice(0, 30);
-      if (this.hostState.players.includes(name)) {
-        conn.send({ type: 'error', message: 'Nama sudah dipakai.' });
+    startSelection() {
+        const input = document.getElementById('player-input').value;
+        const list = [...new Set(input.split(/[,\n]/).map(s => s.trim()).filter(s => s))];
+        
+        if (list.length < 2) return alert("Minimal 2 Gladiator!");
+        
+        this.state.players = list;
+        list.forEach(p => this.state.scores[p] = 0);
+        this.switchScreen('screen-selection');
+
+        const king = list[Math.floor(Math.random() * list.length)];
+        const strip = document.getElementById('roulette-strip');
+        
+        // Animasi Roulette
+        strip.innerHTML = Array(20).fill(list).flat()
+            .map(n => `<div style="height:150px;line-height:150px;text-align:center;font-size:2rem;">${n}</div>`)
+            .join('') + 
+            `<div style="height:150px;line-height:150px;text-align:center;font-size:2.5rem;color:var(--gold);">${king}</div>`;
+        
+        setTimeout(() => strip.style.top = `-${(strip.children.length - 1) * 150}px`, 100);
+        
+        setTimeout(() => {
+            this.state.king = king;
+            this.state.queue = list.filter(p => p !== king).sort(() => Math.random() - 0.5);
+            this.showBriefing();
+        }, 4500);
+    },
+
+    showBriefing() {
+        this.switchScreen('screen-briefing');
+        document.getElementById('k-brief').innerText = this.state.king;
+        document.getElementById('c-brief').innerText = this.state.queue[0];
+        document.getElementById('queue-container').innerHTML = this.state.queue
+            .map((name, i) => `<div style="background:#2c3e50; padding:8px; font-size:0.9rem;">#${i+1} ${name}</div>`)
+            .join('');
+    },
+
+    enterArena() {
+        this.switchScreen('screen-battle');
+        this.loadMatch();
+    },
+
+    // --- GAMEPLAY ---
+    loadMatch() {
+        if (this.state.currentRound > this.state.maxRounds) return this.endGame();
+        
+        this.state.isLock = false;
+        this.state.answered = { king: false, chal: false };
+        
+        document.getElementById('king-name').innerText = this.state.king;
+        document.getElementById('chal-name').innerText = this.state.queue[0];
+        document.getElementById('king-score').innerText = this.state.scores[this.state.king];
+        document.getElementById('chal-score').innerText = this.state.scores[this.state.queue[0]];
+        document.getElementById('round-info').innerText = `PUTARAN ${this.state.currentRound} - DUEL ${this.state.duelCount + 1}`;
+
+        // Antrean berikutnya, sesuai urutan maju (rekomendasi #3)
+        const nextList = document.getElementById('next-up-list');
+        if (nextList) {
+            const upcoming = this.state.queue.slice(1);
+            if (upcoming.length === 0) {
+                nextList.innerHTML = '<div class="next-up-chip">— Ini duel terakhir di antrean —</div>';
+            } else {
+                nextList.innerHTML = upcoming.map((name, i) => `
+                    <div class="next-up-chip ${i === 0 ? 'next-up-soon' : ''}">
+                        <span class="next-up-order">#${i + 1}</span> ${name}
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Progress keseluruhan (rekomendasi #4)
+        const totalChallengers = this.state.queue.length;
+        const totalDuels = this.state.maxRounds * totalChallengers;
+        const duelIndexOverall = (this.state.currentRound - 1) * totalChallengers + this.state.duelCount + 1;
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar-inner');
+        if (progressText) progressText.innerText = `Duel ${duelIndexOverall} / ${totalDuels}`;
+        if (progressBar) progressBar.style.width = `${Math.min(100, ((duelIndexOverall - 1) / totalDuels) * 100)}%`;
+        
+        let pool = this.state.filteredQuestions;
+        if (this.state.kelas) {
+            pool = pool.filter(d => String(d.kelas) === String(this.state.kelas));
+        }
+        if (this.state.materi) {
+            pool = pool.filter(d => d.materi === this.state.materi);
+        }
+        if (this.state.semester) {
+            pool = pool.filter(d => String(d.semester) === String(this.state.semester));
+        }
+
+        if (pool.length === 0) {
+            showAlert("ARENA KOSONG", "Para dewa belum menurunkan soal untuk pertarungan ini...");
+            document.getElementById('opt-text').innerHTML = "";
+            return;
+        }
+
+        // Hindari soal yang sudah keluar (rekomendasi #2). Kalau seluruh pool sudah
+        // pernah dipakai, baru dianggap satu putaran penuh selesai dan direset.
+        let freshPool = pool.filter(d => !this.state.usedQuestions.includes(d.q));
+        if (freshPool.length === 0) {
+            this.state.usedQuestions = [];
+            freshPool = pool;
+        }
+
+        const qData = freshPool[Math.floor(Math.random() * freshPool.length)];
+        this.state.usedQuestions.push(qData.q);
+
+        const opts = [qData.a, ...qData.o].sort(() => Math.random() - 0.5);
+        this.state.ansLet = String.fromCharCode(65 + opts.indexOf(qData.a));
+        
+        document.getElementById('q-text').innerText = qData.q;
+        document.getElementById('opt-text').innerHTML = opts
+            .map((o, i) => `<div><b>${String.fromCharCode(65+i)}.</b> ${o}</div>`)
+            .join('');
+        
+        document.querySelectorAll('.pad-btn').forEach(b => {
+            b.classList.remove('wrong', 'correct');
+            b.disabled = false;
+        });
+
+        this.startTimer();
+    },
+
+    // --- TIMER (rekomendasi #1) ---
+    startTimer() {
+        this.clearTimer();
+        this.state.isPaused = false;
+        this.state.timeLeft = this.state.timeLimit;
+
+        const bar = document.getElementById('timer-bar-inner');
+        if (bar) {
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            bar.classList.remove('timer-warn', 'timer-danger');
+            void bar.offsetWidth; // paksa reflow biar transisi berikutnya mulus
+            bar.style.transition = 'width 1s linear, background-color 1s linear';
+        }
+
+        this.state.timerId = setInterval(() => this.timerTick(), 1000);
+    },
+
+    timerTick() {
+        this.state.timeLeft--;
+        this.updateTimerBar();
+
+        if (this.state.timeLeft <= 0) {
+            this.clearTimer();
+            if (!this.state.isLock) {
+                this.state.isLock = true;
+                document.querySelectorAll('.pad-btn').forEach(b => b.disabled = true);
+                Sound.timeout();
+                this.showFeedback(null, null, false, null, true);
+            }
+        }
+    },
+
+    updateTimerBar() {
+        const bar = document.getElementById('timer-bar-inner');
+        if (!bar) return;
+        const pct = Math.max(0, (this.state.timeLeft / this.state.timeLimit) * 100);
+        bar.style.width = pct + '%';
+        bar.classList.remove('timer-warn', 'timer-danger');
+        if (this.state.timeLeft <= 3) bar.classList.add('timer-danger');
+        else if (this.state.timeLeft <= 6) bar.classList.add('timer-warn');
+    },
+
+    clearTimer() {
+        if (this.state.timerId) {
+            clearInterval(this.state.timerId);
+            this.state.timerId = null;
+        }
+    },
+
+    // --- JEDA DARURAT (rekomendasi #4) ---
+    togglePause() {
+        if (this.state.isPaused) this.resumeTimer();
+        else this.pauseTimer();
+    },
+
+    pauseTimer() {
+        // Gak bisa jeda kalau timer emang lagi gak jalan (misal pas overlay hasil/roast muncul)
+        if (this.state.isPaused || this.state.isLock || !this.state.timerId) return;
+
+        this.state.isPaused = true;
+        this.clearTimer();
+
+        this.state.pausedButtons = [];
+        document.querySelectorAll('.pad-btn').forEach(b => {
+            if (!b.disabled) {
+                b.disabled = true;
+                this.state.pausedButtons.push(b);
+            }
+        });
+
+        const overlay = document.getElementById('pause-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+        const btn = document.getElementById('btn-pause');
+        if (btn) btn.innerText = '▶️ LANJUTKAN';
+    },
+
+    resumeTimer() {
+        if (!this.state.isPaused) return;
+        this.state.isPaused = false;
+
+        (this.state.pausedButtons || []).forEach(b => b.disabled = false);
+        this.state.pausedButtons = [];
+
+        const overlay = document.getElementById('pause-overlay');
+        if (overlay) overlay.classList.add('hidden');
+        const btn = document.getElementById('btn-pause');
+        if (btn) btn.innerText = '⏸ JEDA';
+
+        this.state.timerId = setInterval(() => this.timerTick(), 1000);
+    },
+
+    submit(side, choice, btn) {
+        if (this.state.answered[side] || this.state.isLock) return;
+        
+        if (choice === this.state.ansLet) {
+            this.state.isLock = true;
+            this.clearTimer();
+            btn.classList.add('correct');
+            Sound.correct();
+            const winner = side === 'king' ? this.state.king : this.state.queue[0];
+            const loser = side === 'king' ? this.state.queue[0] : this.state.king;
+            this.state.scores[winner] += 10;
+            this.showFeedback(winner, loser, true, side);
+        } else {
+            this.state.answered[side] = true;
+            btn.classList.add('wrong');
+            btn.disabled = true;
+            Sound.wrong();
+            if (this.state.answered.king && this.state.answered.chal) {
+                this.clearTimer();
+                this.showFeedback(null, null, false);
+            }
+        }
+    },
+
+    showFeedback(winner, loser, isCorrect, side, isTimeout) {
+        this.clearTimer();
+        const overlay = document.getElementById('result-overlay');
+        overlay.classList.remove('hidden');
+        let title = "", roast = "";
+        
+        if (isCorrect) {
+            title = side === 'king' ? "RAJA BERTAHAN!" : "TAHTA DIREBUT!";
+            const rList = side === 'king' ? this.roasts.kingWins : this.roasts.chalWins;
+            roast = rList[Math.floor(Math.random() * rList.length)].replace('${target}', loser);
+            if (side === 'chal') Sound.kingChange();
+        } else if (isTimeout) {
+            title = "WAKTU HABIS!";
+            roast = this.roasts.audienceRoast[Math.floor(Math.random() * this.roasts.audienceRoast.length)]
+                .replace('${k}', this.state.king).replace('${c}', this.state.queue[0]);
+        } else {
+            title = "SEMUA SALAH!";
+            roast = this.roasts.audienceRoast[Math.floor(Math.random() * this.roasts.audienceRoast.length)]
+                .replace('${k}', this.state.king).replace('${c}', this.state.queue[0]);
+        }
+        
+        overlay.innerHTML = `<h1 style="font-size:4rem; font-family:'Cinzel'; color:white;">${title}</h1><div class="roast-text">"${roast}"</div>`;
+        
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            if (isCorrect && side === 'chal') {
+                const oldKing = this.state.king;
+                this.state.king = this.state.queue.shift();
+                this.state.queue.push(oldKing);
+            } else {
+                this.state.queue.push(this.state.queue.shift());
+            }
+            
+            this.state.duelCount++;
+            if (this.state.duelCount >= this.state.queue.length) {
+                this.state.duelCount = 0;
+                this.state.currentRound++;
+            }
+            this.loadMatch();
+        }, 3500);
+    },
+
+    endGame() {
+        this.clearTimer();
+        Sound.victory();
+        this.spawnConfetti();
+        const overlay = document.getElementById('result-overlay');
+        const sorted = Object.entries(this.state.scores).sort((a,b) => b[1] - a[1]);
+        
+        const getTitle = (i, s) => {
+            if(s === 0) return "TAWANAN ARENA ⛓️";
+            if(i === 0) return "KAISAR ARENA 👑"; 
+            if(i === 1) return "GLADIATOR ULUNG ⚔️"; 
+            if(i === 2) return "PRAJURIT TANGGUH 🛡️"; 
+            return "RAKYAT JELATA 📯";
+        };
+
+        const getCls = (i) => i===0 ? 'rank-1' : i===1 ? 'rank-2' : i===2 ? 'rank-3' : 'rank-none';
+        
+        let res = `<h1 class="brand-title" style="font-size:3rem;">HASIL AKHIR</h1>`;
+        sorted.forEach(([n, s], i) => {
+            res += `<div class="medal-box ${getCls(i)}"><span>${getTitle(i, s)}: ${n}</span><span>${s} PT</span></div>`;
+        });
+        
+        overlay.innerHTML = `
+            <div style="overflow-y:auto; width:100%; display:flex; flex-direction:column; align-items:center;">${res}</div>
+            <button onclick="location.reload()" class="btn-action" style="width:auto; margin-top:20px;">MAIN LAGI 🏛️</button>
+        `;
+        overlay.classList.remove('hidden');
+    },
+
+    // --- CONFETTI (rekomendasi #3) ---
+    spawnConfetti(count = 90) {
+        let container = document.getElementById('confetti-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'confetti-container';
+            document.body.appendChild(container);
+        }
+        container.innerHTML = ''; // buang sisa confetti game sebelumnya kalau ada
+
+        const colors = ['#ffcf40', '#ff4d4d', '#27ae60', '#3498db', '#ffffff', '#b8860b'];
+        for (let i = 0; i < count; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = (Math.random() * 100) + 'vw';
+            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.width = (6 + Math.random() * 6) + 'px';
+            piece.style.height = (10 + Math.random() * 8) + 'px';
+            piece.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+            piece.style.animationDelay = (Math.random() * 1.2) + 's';
+            container.appendChild(piece);
+        }
+
+        // Bersihkan DOM otomatis setelah animasi selesai biar gak numpuk
+        setTimeout(() => { container.innerHTML = ''; }, 5500);
+    }
+};
+
+// --- GLOBAL HELPERS ---
+function getKelasDariURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("kelas");
+}
+
+function cekSoalTersedia() {
+    let pool = Game.db;
+    if (Game.state.kelas) {
+        pool = pool.filter(d => String(d.kelas).trim() === String(Game.state.kelas).trim());
+    }
+    if (Game.state.materi) {
+        pool = pool.filter(d => d.materi.toLowerCase().trim() === Game.state.materi.toLowerCase().trim());
+    }
+    if (Game.state.semester) {
+        pool = pool.filter(d => String(d.semester).trim() === String(Game.state.semester).trim());
+    }
+    return pool.length > 0;
+}
+
+function pilihFilter() {
+    if (!Game.state.dataLoaded) {
+        showAlert("ARENA BELUM SIAP", "Soal masih dimuat dari langit, tunggu sebentar ya...");
         return;
-      }
-      this.hostState.players.push(name);
-      this.hostState.scores[name] = 0;
-      conn.playerName = name;
-
-      this.broadcastLobby();
-      this.sendTo(conn, { type: 'joined', name, room: this.roomCode });
     }
 
-    if (m.type === 'answer' && this.mode === 'host') {
-      this.receiveAnswer(m.name, m.answer);
-    }
-  },
+    const materi = document.getElementById('materi-select').value;
+    const kelas = document.getElementById('kelas-select').value;
+    const semester = document.getElementById('semester-select').value;
 
-  removePlayer(peer) {
-    const c = this.connections.get(peer);
-    if (c?.playerName) {
-      this.hostState.players = this.hostState.players.filter(n => n !== c.playerName);
-      delete this.hostState.scores[c.playerName];
-      this.broadcastLobby();
-    }
-    this.connections.delete(peer);
-  },
-
-  broadcast(msg) {
-    this.connections.forEach(c => {
-      try {
-        c.send(msg);
-      } catch (e) {}
-    });
-  },
-
-  sendTo(conn, msg) {
-    try {
-      conn.send(msg);
-    } catch (e) {}
-  },
-
-  broadcastLobby() {
-    this.renderLobby();
-    this.broadcast({ type: 'lobby', players: this.hostState.players });
-  },
-
-  renderLobby() {
-    $('host-room-code').textContent = this.roomCode;
-    $('host-count').textContent = this.hostState.players.length;
-    $('host-player-list').innerHTML = this.hostState.players.length
-      ? this.hostState.players.map(n => `<div class="player-chip"><span class="dot">●</span> ${this.esc(n)}</div>`).join('')
-      : '<div class="demo-note">Belum ada peserta. Bagikan kode room.</div>';
-  },
-
-  /* ------------------------------------------------------------------------
-     PLAYER / JOIN ROOM LOGIC
-     ------------------------------------------------------------------------ */
-  joinRoom() {
-    const code = ($('join-code').value || '').trim().toUpperCase();
-    const name = ($('player-name').value || '').trim();
-
-    if (!/^PAI[A-Z0-9]{3}$/.test(code)) {
-      this.setJoinStatus('Kode room tidak valid.');
-      return;
-    }
-    if (!name) {
-      this.setJoinStatus('Nama harus diisi.');
-      return;
+    if (!materi || !kelas || !semester) {
+        showAlert("PERINTAH TIDAK LENGKAP", "Gladiator harus memilih materi, kelas, dan semester sebelum bertarung!");
+        return;
     }
 
-    this.player.name = name;
-    this.roomCode = code;
-    this.setJoinStatus('Menghubungkan ke room...');
+    if (Game.db.length === 0) {
+        showAlert("ARENA BELUM SIAP", "Para dewa masih menyiapkan soal...");
+        return;
+    }
 
-    this.peer = new Peer();
-    this.peer.on('open', () => {
-      this.hostConn = this.peer.connect('pai-' + code, { reliable: true });
-      this.hostConn.on('open', () => {
-        this.hostConn.send({ type: 'join', name });
-        this.show('screen-player-lobby');
-        $('player-room-code').textContent = code;
-        $('player-welcome').textContent = name;
-      });
+    const pool = Game.db.filter(d => {
+        return String(d.kelas).trim() === kelas &&
+               String(d.semester).trim() === semester &&
+               d.materi.toLowerCase().trim() === materi.toLowerCase();
     });
 
-    this.peer.on('error', e => this.setJoinStatus('Gagal terhubung: ' + (e.message || e.type)));
-    this.peer.on('connection', () => {});
-
-    this.waitForHost();
-  },
-
-  waitForHost() {
-    const check = setInterval(() => {
-      if (this.hostConn) {
-        clearInterval(check);
-        this.hostConn.on('data', m => this.handlePlayerMessage(m));
-        this.hostConn.on('close', () => this.setJoinStatus('Room ditutup oleh host.'));
-      }
-    }, 100);
-  },
-
-  handlePlayerMessage(m) {
-    if (!m) return;
-    if (m.type === 'error') {
-      this.setJoinStatus(m.message);
-      return;
-    }
-    if (m.type === 'joined') {
-      this.show('screen-player-lobby');
-      return;
-    }
-    if (m.type === 'lobby') {
-      this.updatePlayerLobby(m.players);
-      return;
-    }
-    if (m.type === 'roulette') {
-      this.showPlayerRoulette(m);
-      return;
-    }
-    if (m.type === 'briefing') {
-      this.showPlayerBriefing(m);
-      return;
-    }
-    if (m.type === 'battle') {
-      this.showPlayerBattle(m);
-      return;
-    }
-    if (m.type === 'timer') {
-      this.playerTimer(m.time);
-      return;
-    }
-    if (m.type === 'feedback') {
-      this.showPlayerFeedback(m);
-      return;
-    }
-    if (m.type === 'final') {
-      this.showPlayerFinal(m);
-      return;
-    }
-    if (m.type === 'paused') {
-      $('player-role-status').textContent = 'PERTANDINGAN DIJEDA';
-      return;
-    }
-  },
-
-  updatePlayerLobby(players) {
-    $('player-role-status').textContent = players.includes(this.player.name)
-      ? `ONLINE • ${players.length} GLADIATOR • Kamu akan masuk antrean duel`
-      : 'MENUNGGU';
-  },
-
-  showPlayerBattle(m) {
-    $('player-room-small').textContent = this.roomCode;
-    $('player-current-name').textContent = this.player.name;
-
-    const isKing = m.king === this.player.name;
-    const isChal = m.chal === this.player.name;
-    const active = isKing || isChal;
-
-    this.player.role = isKing ? 'king' : isChal ? 'chal' : 'spectator';
-
-    $('player-role-icon').textContent = isKing ? '👑' : isChal ? '⚔️' : '👥';
-    $('player-role-title').textContent = isKing ? 'RAJA' : isChal ? 'PENANTANG' : 'MENUNGGU GILIRAN';
-
-    $('player-question-mini').textContent = active
-      ? 'DUEL AKTIF — Soal ada di layar utama. Jawab dari perangkatmu.'
-      : 'SEDANG MENUNGGU GILIRAN MELAWAN RAJA';
-
-    document.querySelectorAll('.answer-grid button').forEach(b => {
-      b.disabled = !active;
-      b.classList.remove('selected');
-    });
-
-    $('player-answer-status').textContent = active
-      ? 'Pilih jawaban A, B, C, atau D.'
-      : 'SEDANG MENUNGGU GILIRAN MELAWAN RAJA';
-
-    this.show('screen-player-answer');
-  },
-
-  playerTimer(t) {
-    $('player-time').textContent = Math.max(0, t);
-    if (this.player.role) {
-      document.querySelector('.player-timer').style.borderColor = t <= 3 ? 'var(--blood)' : 'var(--gold)';
-    }
-  },
-
-  playerAnswer(answer) {
-    if (!this.hostConn || !['king', 'chal'].includes(this.player.role)) return;
-
-    document.querySelectorAll('.answer-grid button').forEach(b => (b.disabled = true));
-    $('player-answer-status').textContent = 'Jawaban terkirim: ' + answer;
-    this.hostConn.send({ type: 'answer', name: this.player.name, answer });
-  },
-
-  showPlayerFeedback(m) {
-    $('player-answer-status').textContent = m.title + (m.winner ? ` • ${m.winner}` : '');
-    document.querySelectorAll('.answer-grid button').forEach(b => (b.disabled = true));
-
-    const overlay = $('result-overlay');
-    if (!overlay) return;
-
-    const winnerLine = m.winner ? `<div class="feedback-winner">🏆 PEMENANG: ${this.esc(m.winner)}</div>` : '';
-    overlay.innerHTML = `
-      <div class="feedback-kicker">${this.esc(m.kicker || '⚔️ HASIL DUEL')}</div>
-      <h1 style="font-size:clamp(2.2rem,7vw,4rem);font-family:'Cinzel';color:white;margin:0">${this.esc(m.title || 'HASIL PERTARUNGAN')}</h1>
-      ${winnerLine}
-      <div class="roast-text">"${this.esc(m.roast || 'Pertarungan selesai!')}"</div>
-    `;
-    overlay.classList.remove('hidden');
-
-    clearTimeout(this.feedbackTimer);
-    this.feedbackTimer = setTimeout(() => overlay.classList.add('hidden'), 2700);
-  },
-
-  showPlayerFinal(m) {
-    this.renderFinalRanking(m.sorted || []);
-    this.show('screen-final');
-  },
-
-  showPlayerRoulette(m) {
-    this.renderRoulette(m.players || [], m.king);
-    $('roulette-result').textContent = 'MENGACAK TAKDIR...';
-    this.show('screen-roulette');
-
-    setTimeout(() => {
-      $('roulette-result').textContent = '👑 RAJA: ' + (m.king || '-');
-    }, Math.max(1200, m.duration || 3500));
-  },
-
-  showPlayerBriefing(m) {
-    this.renderBriefing(m.king, m.queue);
-    $('brief-status').textContent = 'Menunggu host menekan MULAI DUEL...';$('btn-start-duel').classList.add('hidden');
-    this.show('screen-briefing');
-  },
-
-  /* ------------------------------------------------------------------------
-     GAME FLOW & ARENA MECHANICS
-     ------------------------------------------------------------------------ */
-  startOnlineGame() {
-    if (this.hostState.players.length < 2) {
-      this.alert('PESERTA BELUM CUKUP', 'Masukkan minimal 2 guru. Untuk uji tampilan gunakan DEMO SENDIRI.');
-      return;
+    if (pool.length === 0) {
+        showAlert("TAKDIR MENOLAKMU", `Tidak ada soal untuk ${materi} - Kelas ${kelas} Semester ${semester}`);
+        return;
     }
 
-    this.hostState.king = this.hostState.players[Math.floor(Math.random() * this.hostState.players.length)];
-    this.hostState.queue = this.hostState.players.filter(n => n !== this.hostState.king);
-    this.hostState.scores = Object.fromEntries(this.hostState.players.map(n => [n, 0]));
-    this.hostState.round = 1;
-    this.hostState.duelIndex = 0;
-    this.hostState.phase = 'roulette';
+    Game.state.filteredQuestions = pool;
+    Game.state.materi = materi;
+    Game.state.kelas = kelas;
+    Game.state.semester = semester;
 
-    this.showRoulette();
-  },
+    const rondeVal = parseInt(document.getElementById('ronde-select').value, 10);
+    Game.state.maxRounds = (!isNaN(rondeVal) && rondeVal > 0) ? rondeVal : 3;
+    Game.state.usedQuestions = [];
 
-  showRoulette() {
-    const s = this.hostState;
-    this.renderRoulette(s.players, s.king);
-    $('roulette-result').textContent = 'MENGACAK TAKDIR...';
-    this.show('screen-roulette');
+    Game.switchScreen('screen-input');
+}
 
-    this.broadcast({ type: 'roulette', players: s.players, king: s.king, duration: 4200 });
-    Sound.kingChange();
+function masukArenaCek() {
+    Game.enterArena();
+}
 
-    setTimeout(() => {
-      Sound.victory();
-      $('roulette-result').textContent = '👑 RAJA TERPILIH: ' + s.king;
-    }, 3600);
+function showAlert(title, message) {
+    const overlay = document.getElementById('alert-overlay');
+    document.getElementById('alert-title').innerText = title;
+    document.getElementById('alert-message').innerText = message;
+    overlay.classList.add('show');
+}
 
-    setTimeout(() => this.showBriefing(), 4700);
-  },
+function closeAlert() {
+    document.getElementById('alert-overlay').classList.remove('show');
+}
 
-  renderRoulette(players, winner) {
-    const strip = $('roulette-strip');
-    if (!strip) return;
-
-    const names = [];
-    for (let i = 0; i < 4; i++) names.push(...players);
-
-    strip.innerHTML = names.map(n => `<span>${this.esc(n)}</span>`).join('');
-    strip.style.transition = 'none';
-    strip.style.transform = 'translateX(0)';
-
-    void strip.offsetWidth;
-
-    const winnerIndex = Math.max(0, players.indexOf(winner || this.hostState.king));
-    const shift = -(winnerIndex + players.length * 2) * 190 + 120;
-
-    strip.style.transition = 'transform 4s cubic-bezier(.08,.72,.12,1)';
-    strip.style.transform = `translateX(${shift}px)`;
-  },
-
-  showBriefing() {
-    const s = this.hostState;
-    s.phase = 'briefing';
-
-    this.renderBriefing(s.king, s.queue);
-    $('brief-status').textContent = 'Raja telah dipilih. Periksa antrean sebelum duel dimulai.';
-    $('btn-start-duel').classList.remove('hidden');
-
-    this.show('screen-briefing');
-    this.broadcast({ type: 'briefing', king: s.king, queue: s.queue });
-  },
-
-  renderBriefing(king, queue) {
-    $('brief-king').textContent = king || '-';
-    $('brief-chal').textContent = queue?.[0] \vert{}\vert{} '-';$('brief-queue').innerHTML = (queue || []).map((n, i) => `
-      <div class="brief-chip ${i === 0 ? 'active' : ''}">
-        <b>#${i + 1}</b>
-        <span>${this.esc(n)}</span>
-        ${i === 0 ? '<em>DUEL PERTAMA</em>' : ''}
-      </div>
-    `).join('') || '<div class="demo-note">Tidak ada antrean.</div>';
-  },
-
-  hostStartDuel() {
-    if (this.mode !== 'host' || this.hostState.phase !== 'briefing') return;
-
-    $('btn-start-duel').disabled = true;
-    $('brief-status').textContent = 'GERBANG DIBUKA — DUEL DIMULAI!';
-    this.hostState.phase = 'battle';
-    this.beginDuel();
-  },
-
-  beginDuel() {
-    const s = this.hostState;
-    if (s.round > s.maxRounds) return this.finishGame();
-    if (!s.queue.length) return this.finishGame();
-
-    s.locked = false;
-    s.answered = { king: false, chal: false };
-
-    // HANYA satu Penantang aktif pada setiap duel: orang pertama di antrean.
-    s.chal = s.queue[0];
-    s.duelIndex++;
-
-    const pool = DEMO_QUESTIONS.filter(
-      q => q.materi === s.materi && q.kelas === s.kelas && q.semester === s.semester
-    );
-    const source = pool.length ? pool : DEMO_QUESTIONS;
-    const q = source[Math.floor(Math.random() * source.length)];
-
-    const opts = [q.a, ...q.o].sort(() => Math.random() - 0.5);
-    s.question = q;
-    s.options = opts;
-    s.answerLetter = String.fromCharCode(65 + opts.indexOf(q.a));
-    s.timeLeft = 12;
-
-    this.renderArena();
-    this.broadcast({
-      type: 'battle',
-      king: s.king,
-      chal: s.chal,
-      round: s.round,
-      duel: s.duelIndex,
-      question: q.q,
-      options: opts
-    });
-
-    this.show('screen-battle');
-    this.startHostTimer();
-  },
-
-  renderArena() {
-    const s = this.hostState;
-    $('king-name').textContent = s.king;
-    $('chal-name').textContent = s.chal;
-    $('king-score').textContent = s.scores[s.king] || 0;
-    $('chal-score').textContent = s.scores[s.chal] || 0;
-    $('round-info').textContent = `PUTARAN ${s.round} • DUEL ${s.duelIndex}`;
-    $('q-text').textContent = s.question.q;
-
-    $('opt-text').innerHTML = s.options
-      .map((o, i) => `<div><b>${String.fromCharCode(65 + i)}.</b> ${this.esc(o)}</div>`)
-      .join('');
-
-    $('arena-status').textContent = `DUEL AKTIF: ${s.king} 👑 VS ${s.chal} ⚔️ — Peserta lain menunggu antrean.`;
-
-    const total = s.maxRounds * s.queue.length;
-    $('progress-text').textContent = `Duel ${s.duelIndex} / ${total}`;
-    $('progress-bar-inner').style.width = Math.min(100, ((s.duelIndex - 1) / total) * 100) + '%';
-
-    $('next-up-list').innerHTML = s.queue
-      .slice(1)
-      .map(
-        (n, i) => `
-          <div class="next-up-chip ${i === 0 ? 'next-up-soon' : ''}">
-            <span style="color:var(--gold);font-weight:bold">#${i + 1}</span> ${this.esc(n)}
-          </div>`
-      )
-      .join('') || '<div class="next-up-chip">— Duel terakhir di antrean —</div>';
-  },
-
-  startHostTimer() {
-    clearInterval(this.hostState.timer);
-    this.hostState.timer = setInterval(() => {
-      if (this.hostState.locked) return;
-
-      this.hostState.timeLeft--;
-      this.updateArenaTimer();
-      this.broadcast({ type: 'timer', time: this.hostState.timeLeft });
-
-      if (this.hostState.timeLeft <= 0) {
-        clearInterval(this.hostState.timer);
-        this.hostState.locked = true;
-        this.finishDuel(null, 'DEWA KECEWA!');
-      }
-    }, 1000);
-
-    this.updateArenaTimer();
-  },
-
-  updateArenaTimer() {
-    const t = this.hostState.timeLeft;
-    $('timer-bar-inner').style.width = (t / 12) * 100 + '%';
-    $('timer-bar-inner').classList.toggle('timer-warn', t <= 6 && t > 3);$('timer-bar-inner').classList.toggle('timer-danger', t <= 3);
-  },
-
-  receiveAnswer(name, answer) {
-    const s = this.hostState;
-    if (s.locked) return;
-
-    const side = name === s.king ? 'king' : name === s.chal ? 'chal' : null;
-    if (!side || s.answered[side]) return;
-
-    if (answer === s.answerLetter) {
-      s.locked = true;
-      clearInterval(s.timer);
-      s.scores[name] = (s.scores[name] || 0) + 10;
-      Sound.correct();
-
-      const loser = side === 'king' ? s.chal : s.king;
-      this.finishDuel(
-        side === 'king' ? s.king : s.chal,
-        side === 'king' ? 'RAJA BERTAHAN!' : 'TAHTA DIREBUT!',
-        loser,
-        side
-      );
-    } else {
-      s.answered[side] = true;
-      Sound.wrong();
-
-      if (s.answered.king && s.answered.chal) {
-        s.locked = true;
-        clearInterval(s.timer);
-        this.finishDuel(null, 'DEWA KECEWA!');
-      }
+// --- INITIALIZE ---
+window.onload = () => {
+    Game.playIntro();
+    Game.bindFilterListeners();
+    const kelas = getKelasDariURL();
+    if (kelas) {
+        Game.state.kelas = kelas;
+        const kelasSelect = document.getElementById('kelas-select');
+        if (kelasSelect) kelasSelect.value = kelas;
+        console.log("Kelas terpilih dari URL:", kelas);
     }
-  },
-
-  finishDuel(winner, title, loser, side) {
-    const s = this.hostState;
-    let roast, kicker;
-
-    if (winner) {
-      const list = side === 'king' ? this.roasts.kingWins : this.roasts.chalWins;
-      roast = list[Math.floor(Math.random() * list.length)].replaceAll('${target}', loser);
-      kicker = side === 'king'
-        ? `👑 RAJA ${winner} MEROSTING ⚔️ GLADIATOR ${loser}`
-        : `⚔️ GLADIATOR ${winner} MEROSTING 👑 RAJA ${loser}`;
-    } else {
-      roast = this.roasts.audience[Math.floor(Math.random() * this.roasts.audience.length)]
-        .replaceAll('${k}', s.king)
-        .replaceAll('${c}', s.chal);
-      kicker = `⚡ DEWA KECEWA DENGAN DUEL 👑 ${s.king} VS ⚔️ ${s.chal}`;
-    }
-
-    this.showResult(title, roast, kicker, winner);
-    this.broadcast({ type: 'feedback', title, roast, winner, kicker });
-
-    setTimeout(() => {
-      if (side === 'chal') {
-        // Penantang menang: naik menjadi Raja, Raja lama masuk belakang antrean.
-        const oldKing = s.king;
-        const newKing = s.queue.shift();
-        s.king = newKing;
-        s.queue.push(oldKing);
-        Sound.kingChange();
-      } else {
-        // Raja menang: Raja tetap, Penantang aktif dipindah ke belakang antrean.
-        const defeatedChallenger = s.queue.shift();
-        s.queue.push(defeatedChallenger);
-      }
-
-      if (s.duelIndex % s.queue.length === 0) s.round++;
-      this.beginDuel();
-    }, 2800);
-  },
-
-  showResult(title, roast, kicker, winner) {
-    const overlay = $('result-overlay');
-    if (!overlay) return;
-
-    overlay.innerHTML = `
-      <div class="feedback-kicker">${this.esc(kicker || '⚔️ HASIL DUEL')}</div>
-      <div class="feedback-title">${this.esc(title)}</div>
-      ${winner ? `<div class="feedback-winner">🏆 PEMENANG: ${this.esc(winner)}</div>` : ''}
-      <div class="roast-label">🔥 ROASTING</div>
-      <div class="roast-text">“${this.esc(roast || 'Duel ini membuat para dewa kecewa!')}”</div>
-    `;
-
-    overlay.classList.remove('hidden');
-    overlay.style.display = 'flex';
-    overlay.style.zIndex = '9999';
-
-    clearTimeout(this.resultTimer);
-    this.resultTimer = setTimeout(() => {
-      overlay.classList.add('hidden');
-      overlay.style.display = 'none';
-    }, 5000);
-  },
-
-  finishGame() {
-    const s = this.hostState;
-    clearInterval(s.timer);
-    s.timer = null;
-    s.phase = 'final';
-
-    Sound.victory();
-    const sorted = Object.entries(s.scores).sort((a, b) => b[1] - a[1]);
-    const winner = sorted[0]?.[0] || '';
-
-    this.renderFinalRanking(sorted);
-    this.show('screen-final');
-    this.broadcast({ type: 'final', winner, sorted });
-    this.confetti();
-  },
-
-  renderFinalRanking(sorted) {
-    const titles = [
-      'KAISAR ARENA 👑',
-      'GLADIATOR ULUNG ⚔️',
-      'PRAJURIT TANGGUH 🛡️',
-      'PEJUANG ARENA 🔥',
-      'GLADIATOR BERANI 🗡️'
-    ];
-
-    let html = `
-      <h1 class="brand-title" style="font-size:3rem">HASIL AKHIR</h1>
-      <p class="subtitle">PERINGKAT & GELAR PARA GLADIATOR</p>
-      <div class="final-ranking-list">
-    `;
-
-    sorted.forEach(([n, score], i) => {
-      const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-none';
-      html += `
-        <div class="medal-box ${cls}">
-          <span><b>#${i + 1}</b> ${titles[i] || 'GLADIATOR'} — ${this.esc(n)}</span>
-          <span>${score} PT</span>
-        </div>
-      `;
-    });
-
-    html += `
-      </div>
-      <button class="btn-action" id="return-role" style="width:min(500px,90vw)">
-        KEMBALI KE PILIHAN HOST / PESERTA
-      </button>
-    `;
-
-    $('final-content').innerHTML = html;
-    $('return-role').onclick = () => this.resetToRole();
-  },
-
-  showFinalRanking(sorted) {
-    this.renderFinalRanking(sorted);
-    this.show('screen-final');
-  },
-
-  /* ------------------------------------------------------------------------
-     UTILITIES & HELPERS
-     ------------------------------------------------------------------------ */
-  resetToRole() {
-    clearInterval(this.hostState.timer);
-    this.connections.forEach(c => {
-      try {
-        c.close();
-      } catch (e) {}
-    });
-    this.connections.clear();
-
-    try {
-      this.peer?.destroy();
-    } catch (e) {}
-
-    this.mode = null;
-    this.peer = null;
-    this.hostConn = null;
-    this.roomCode = null;
-
-    this.hostState = {
-      players: [],
-      king: null,
-      queue: [],
-      scores: {},
-      round: 1,
-      maxRounds: 2,
-      duelIndex: 0,
-      question: null,
-      options: [],
-      answerLetter: null,
-      timeLeft: 12,
-      answered: { king: false, chal: false },
-      timer: null,
-      locked: false,
-      materi: 'Aqidah',
-      kelas: '5',
-      semester: '1',
-      phase: 'lobby',
-      paused: false
-    };
-
-    $('result-overlay').classList.add('hidden');
-    $('pause-overlay')?.classList.add('hidden');$('screen-final')?.classList.add('hidden');
-
-    $('btn-start-duel').disabled = false;
-    $('btn-start-duel').classList.remove('hidden');
-
-    this.show('screen-role');
-  },
-
-  togglePause() {
-    if (!this.hostState.timer) return;
-
-    this.hostState.paused = !this.hostState.paused;
-    if (this.hostState.paused) {
-      clearInterval(this.hostState.timer);
-      $('pause-overlay').classList.remove('hidden');$('btn-pause').textContent = '▶️ LANJUTKAN';
-      this.broadcast({ type: 'paused' });
-    } else {
-      $('pause-overlay').classList.add('hidden');$('btn-pause').textContent = '⏸ JEDA';
-      this.startHostTimer();
-    }
-  },
-
-  setJoinStatus(t) {
-    $('join-status').textContent = t;
-  },
-
-  alert(title, msg) {
-    $('alert-title').textContent = title;
-    $('alert-message').textContent = msg;
-    $('alert-overlay').classList.add('show');
-  },
-
-  closeAlert() {
-    $('alert-overlay').classList.remove('show');
-  },
-
-  confetti() {
-    const c = $('confetti-container');
-    c.innerHTML = '';
-
-    const colors = ['#ffcf40', '#ff4d4d', '#27ae60', '#3498db', '#fff'];
-    for (let i = 0; i < 70; i++) {
-      const p = document.createElement('div');
-      p.className = 'confetti-piece';
-      p.style.left = Math.random() * 100 + 'vw';
-      p.style.background = colors[Math.floor(Math.random() * colors.length)];
-      p.style.width = 6 + Math.random() * 6 + 'px';
-      p.style.height = 10 + Math.random() * 8 + 'px';
-      p.style.animationDuration = 2.5 + Math.random() * 2 + 's';
-      c.appendChild(p);
-    }
-
-    setTimeout(() => (c.innerHTML = ''), 5500);
-  },
-
-  esc(s) {
-    return String(s ?? '').replace(
-      /[&<>'"]/g,
-      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])
-    );
-  }
+    Game.loadFromGSS();
 };
 
-window.addEventListener('load', () => App.init());
+// Shortcut spasi buat jeda darurat (opsional, gak ganggu tap di TV)
+document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) return;
+    const battleScreen = document.getElementById('screen-battle');
+    if (battleScreen && !battleScreen.classList.contains('hidden')) {
+        e.preventDefault();
+        Game.togglePause();
+    }
+});
