@@ -1,161 +1,172 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colosseum Quiz - Gladiator Arena</title>
-    <base target="_top">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colosseum PAI — Demo Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <button id="btn-sound" class="sound-toggle" title="Suara On/Off">🔊</button>
 
-    <button id="btn-sound" class="sound-toggle" onclick="Sound.toggle()" title="Suara On/Off">🔊</button>
-
-    <main id="screen-intro" class="screen">
-        <div id="i1" style="opacity:0; transition: 1.5s;" class="intro-t">Hanya yang terpilih...</div>
-        <div id="i2" style="opacity:0; transition: 1.5s; margin: 20px 0;" class="intro-t">Hanya yang berani...</div>
-        <div id="i3" style="opacity:0; transition: 1.5s; color:var(--gold); font-size: 3.5rem;" class="intro-t">DEWA MENANTI DI ARENA.</div>
-        <button id="gb" style="opacity:0; transition: 1s;" class="btn-action" onclick="Game.switchScreen('screen-materi')">BUKA GERBANG 🏛️</button>
-    </main>
-
-    <main id="screen-materi" class="screen hidden">
-        <h1 class="brand-title title-glow" style="font-size:3rem;">PILIH ARENAMU</h1>
-        <div class="stone-panel" style="max-width:600px; text-align:center;">
-            <div class="select-box">
-                <select id="materi-select" class="game-select">
-                    <option value="">⚔️ Pilih Materi</option>
-                    <option value="Aqidah">🕌 Aqidah</option>
-                    <option value="Akhlaq">✨ Akhlaq</option>
-                    <option value="Quran">📖 Al-Qur'an</option>
-                    <option value="Fiqih">⚖️ Fiqih</option>
-                    <option value="Tarikh">🏛️ Tarikh</option>
-                </select>
-            </div>
-
-            <div class="select-box">
-                <select id="kelas-select" class="game-select">
-                    <option value="">🎓 Pilih Kelas</option>
-                    <option value="1">Kelas 1</option>
-                    <option value="2">Kelas 2</option>
-                    <option value="3">Kelas 3</option>
-                    <option value="4">Kelas 4</option>
-                    <option value="5">Kelas 5</option>
-                    <option value="6">Kelas 6</option>
-                </select>
-            </div>
-
-            <div class="select-box">
-                <select id="semester-select" class="game-select">
-                    <option value="">📅 Pilih Semester</option>
-                    <option value="1">Semester 1</option>
-                    <option value="2">Semester 2</option>
-                </select>
-            </div>
-            <div class="select-box">
-                <select id="ronde-select" class="game-select">
-                    <option value="3" selected>🔁 3 Ronde (Normal)</option>
-                    <option value="5">🔁 5 Ronde (Panjang)</option>
-                    <option value="7">🔁 7 Ronde (Sangat Panjang)</option>
-                </select>
-            </div>
-            <button id="btn-lanjut" class="btn-action" onclick="pilihFilter()" disabled>⏳ MEMUAT SOAL...</button>
-        </div>
-    </main>
-
-    <main id="screen-input" class="screen hidden">
-        <h1 class="brand-title">COLOSSEUM</h1>
-        <div class="stone-panel">
-            <textarea id="player-input" placeholder="Masukkan Nama Gladiator (pisahkan dengan koma atau enter)..."></textarea>
-            <button onclick="Game.startSelection()" class="btn-action">ACAK TAKDIR RAJA ⚔️</button>
-        </div>
-    </main>
-
-    <main id="screen-selection" class="screen hidden">
-        <h2 class="brand-title" style="font-size: 3rem;">MEMILIH RAJA...</h2>
-        <div class="roulette-box" style="height:150px; overflow:hidden; border-top:5px solid var(--gold); border-bottom:5px solid var(--gold); width:600px; position:relative;">
-            <div id="roulette-strip" style="position:absolute; width:100%; top:0; transition: top 4s cubic-bezier(0.1, 0, 0.1, 1);"></div>
-        </div>
-    </main>
-
-    <main id="screen-briefing" class="screen hidden">
-        <div class="stone-panel" style="text-align:center;">
-            <h2 class="brand-title" style="font-size: 2.5rem;">URUTAN PERANG</h2>
-            <div style="display:flex; justify-content:space-around; align-items:center; margin:30px 0;">
-                <div>
-                    <div style="color:var(--gold);">RAJA</div>
-                    <div id="k-brief" style="font-size:3.5rem; font-family:'Cinzel';"></div>
-                </div>
-                <div style="font-size:3rem;">VS</div>
-                <div>
-                    <div style="color:var(--blood);">PENANTANG I</div>
-                    <div id="c-brief" style="font-size:3.5rem; font-family:'Cinzel';"></div>
-                </div>
-            </div>
-            <div id="queue-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:10px; margin-bottom: 20px;"></div>
-            <button onclick="masukArenaCek()" class="btn-action">MASUK ARENA 🏛️</button>
-        </div>
-    </main>
-
-    <main id="screen-battle" class="screen hidden">
-        <button id="btn-pause" class="btn-pause" onclick="Game.togglePause()">⏸ JEDA</button>
-        <div id="pause-overlay" class="hidden">
-            <div class="alert-box">
-                <h1 style="font-family:'Cinzel'; font-size:2.5rem; color:var(--gold);">⏸ DIJEDA</h1>
-                <p style="font-size:1.4rem; margin:20px 0;">Pertandingan dihentikan sementara oleh guru...</p>
-            </div>
-        </div>
-        <div id="progress-wrap">
-            <div id="progress-text">Duel 1 / 1</div>
-            <div id="progress-bar-outer"><div id="progress-bar-inner"></div></div>
-        </div>
-        <div class="arena-grid">
-            <div class="warrior-card" style="border-color: var(--gold);">
-                <div class="brand-title" id="king-name" style="font-size:2rem; letter-spacing: 2px;"></div>
-                <div id="king-score" style="font-size:4rem; font-family:'Cinzel'; color:var(--gold);">0</div>
-                <div class="pad-grid">
-                    <button class="pad-btn" onclick="Game.submit('king', 'A', this)">A</button>
-                    <button class="pad-btn" onclick="Game.submit('king', 'B', this)">B</button>
-                    <button class="pad-btn" onclick="Game.submit('king', 'C', this)">C</button>
-                    <button class="pad-btn" onclick="Game.submit('king', 'D', this)">D</button>
-                </div>
-            </div>
-
-            <div class="q-card">
-                <div id="round-info" style="font-weight:bold; color:#8e44ad; font-size: 1.2rem;">PUTARAN 1</div>
-                <div id="timer-bar-outer"><div id="timer-bar-inner"></div></div>
-                <div id="q-text">Memuat Soal...</div>
-                <div id="opt-text"></div>
-            </div>
-
-            <div class="warrior-card" style="border-color: var(--blood);">
-                <div class="brand-title" id="chal-name" style="font-size:2rem; letter-spacing: 2px;"></div>
-                <div id="chal-score" style="font-size:4rem; font-family:'Cinzel'; color:var(--blood);">0</div>
-                <div class="pad-grid">
-                    <button class="pad-btn" onclick="Game.submit('chal', 'A', this)">A</button>
-                    <button class="pad-btn" onclick="Game.submit('chal', 'B', this)">B</button>
-                    <button class="pad-btn" onclick="Game.submit('chal', 'C', this)">C</button>
-                    <button class="pad-btn" onclick="Game.submit('chal', 'D', this)">D</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="next-up-wrap">
-            <div id="next-up-title">ANTREAN BERIKUTNYA</div>
-            <div id="next-up-list"></div>
-        </div>
-    </main>
-
-    <div id="result-overlay" class="hidden"></div>
-
-    <div id="alert-overlay">
-        <div class="alert-box">
-            <h1 id="alert-title" style="font-family:'Cinzel'; font-size:2.5rem; color:var(--gold);"></h1>
-            <p id="alert-message" style="font-size:1.4rem; margin:20px 0;"></p>
-            <button class="btn-action" onclick="closeAlert()">KEMBALI</button>
-        </div>
+  <main id="screen-intro" class="screen">
+    <div class="intro-t" id="i1">Hanya yang terpilih...</div>
+    <div class="intro-t" id="i2">Hanya yang berani...</div>
+    <div class="intro-t gold" id="i3">DEWA MENANTI DI ARENA.</div>
+    <div class="intro-actions" id="intro-actions">
+      <button class="btn-action" id="btn-open">BUKA GERBANG 🏛️</button>
+      <button class="btn-secondary" id="btn-quick-demo">DEMO CEPAT</button>
     </div>
+  </main>
 
-    <script src="script.js"></script>
+  <main id="screen-role" class="screen hidden">
+    <h1 class="brand-title title-glow">COLOSSEUM PAI</h1>
+    <p class="subtitle">Pilih peran untuk demonstrasi online</p>
+    <div class="role-grid">
+      <button class="role-card" id="choose-host"><span>🎤</span><b>HOST / NARASUMBER</b><small>Membuat room, mengatur pertandingan, dan menampilkan Arena di Zoom.</small></button>
+      <button class="role-card" id="choose-player"><span>📱</span><b>PESERTA</b><small>Masuk menggunakan kode room dari HP atau laptop.</small></button>
+    </div>
+    <div class="demo-note">Mode demo ini mempertahankan konsep <b>Raja vs Penantang</b>. Peserta lain tetap berada di antrean.</div>
+  </main>
+
+  <main id="screen-host-setup" class="screen hidden">
+    <h1 class="brand-title">HOST ARENA</h1>
+    <div class="stone-panel compact">
+      <label>Materi</label>
+      <select id="materi-select" class="game-select"><option>Aqidah</option><option>Akhlaq</option><option>Al-Qur'an</option><option>Fiqih</option><option>Tarikh</option></select>
+      <label>Kelas</label>
+      <select id="kelas-select" class="game-select"><option>1</option><option>2</option><option>3</option><option selected>5</option><option>6</option></select>
+      <label>Semester</label>
+      <select id="semester-select" class="game-select"><option selected>1</option><option>2</option></select>
+      <label>Ronde</label>
+      <select id="ronde-select" class="game-select"><option value="1">1 Ronde — Demo</option><option value="2" selected>2 Ronde — Demo</option><option value="3">3 Ronde</option></select>
+      <label>Nama Host</label>
+      <input id="host-name" class="text-input" value="Narasumber" maxlength="30">
+      <button class="btn-action" id="create-room">BUAT ROOM ⚔️</button>
+      <button class="btn-secondary wide" id="back-role-1">KEMBALI</button>
+    </div>
+  </main>
+
+  <main id="screen-host-lobby" class="screen hidden">
+    <h1 class="brand-title" style="font-size:3rem">RUANG PERTEMPURAN</h1>
+    <div class="room-code"><span>KODE ROOM</span><b id="host-room-code">------</b></div>
+    <p class="lobby-hint">Bagikan kode ini kepada guru peserta melalui Zoom.</p>
+    <div class="stone-panel lobby-panel">
+      <div class="lobby-head"><b>PESERTA ONLINE</b><span id="host-count">0</span></div>
+      <div id="host-player-list" class="player-list"></div>
+      <div class="host-actions">
+        <button class="btn-action" id="start-online-game">MULAI PERTANDINGAN 🏛️</button>
+        <button class="btn-secondary" id="copy-room">SALIN KODE</button>
+        <button class="btn-secondary" id="close-room">TUTUP ROOM</button>
+      </div>
+      <div class="demo-note">Untuk demo, minimal 2 peserta. Jika hanya ingin menguji tampilan, tombol <b>DEMO SENDIRI</b> akan membuat gladiator contoh.</div>
+      <button class="btn-secondary wide" id="solo-demo">DEMO SENDIRI (BUAT GLADIATOR CONTOH)</button>
+    </div>
+  </main>
+
+  <main id="screen-player-join" class="screen hidden">
+    <h1 class="brand-title">MASUK COLOSSEUM</h1>
+    <div class="stone-panel compact">
+      <label>Kode Room</label>
+      <input id="join-code" class="text-input code-input" placeholder="Contoh: PAI7K2" maxlength="6">
+      <label>Nama Gladiator</label>
+      <input id="player-name" class="text-input" placeholder="Nama kamu" maxlength="30">
+      <button class="btn-action" id="join-room">MASUK ARENA ⚔️</button>
+      <button class="btn-secondary wide" id="back-role-2">KEMBALI</button>
+      <div id="join-status" class="status-text"></div>
+    </div>
+  </main>
+
+  <main id="screen-player-lobby" class="screen hidden">
+    <h1 class="brand-title" style="font-size:3rem">MENUNGGU PERANG</h1>
+    <div class="room-code"><span>ROOM</span><b id="player-room-code">------</b></div>
+    <div class="stone-panel compact center">
+      <div class="waiting-avatar">⚔️</div>
+      <h2 id="player-welcome">Menunggu...</h2>
+      <p>Jangan tutup halaman. Host akan menentukan Raja dan Penantang.</p>
+      <div id="player-role-status" class="role-status">MENUNGGU PEMAIN LAIN</div>
+    </div>
+  </main>
+
+  <main id="screen-roulette" class="screen hidden">
+    <h1 class="brand-title title-glow">ROULETTE TAKDIR</h1>
+    <p class="subtitle">Siapa yang akan menjadi Raja Colosseum?</p>
+    <div class="roulette-stage">
+      <div class="roulette-pointer">▼</div>
+      <div id="roulette-strip" class="roulette-strip"></div>
+    </div>
+    <div id="roulette-result" class="roulette-result">MENGACAK...</div>
+  </main>
+
+  <main id="screen-briefing" class="screen hidden">
+    <h1 class="brand-title" style="font-size:3rem">TAKDIR TELAH DITENTUKAN</h1>
+    <div class="briefing-panel stone-panel">
+      <div class="briefing-duel">
+        <div><div class="brief-role king-text">👑 RAJA</div><div id="brief-king" class="brief-name">-</div></div>
+        <div class="brief-vs">VS</div>
+        <div><div class="brief-role chal-text">⚔️ PENANTANG PERTAMA</div><div id="brief-chal" class="brief-name">-</div></div>
+      </div>
+      <div class="brief-queue-title">URUTAN ANTREAN PENANTANG</div>
+      <div id="brief-queue" class="brief-queue"></div>
+      <div id="brief-status" class="status-text">Menunggu...</div>
+      <button id="btn-start-duel" class="btn-action">MULAI DUEL ⚔️</button>
+    </div>
+  </main>
+
+  <main id="screen-battle" class="screen hidden">
+    <button id="btn-pause" class="btn-pause">⏸ JEDA</button>
+    <div class="host-badge" id="host-badge">HOST • ROOM ------</div>
+    <div id="pause-overlay" class="hidden"><div class="alert-box"><h1>⏸ DIJEDA</h1><p>Pertandingan dihentikan sementara oleh guru...</p></div></div>
+    <div id="progress-wrap"><div id="progress-text">Duel 1 / 1</div><div id="progress-bar-outer"><div id="progress-bar-inner"></div></div></div>
+    <div class="arena-grid">
+      <div class="warrior-card king-card">
+        <div class="warrior-role">👑 RAJA</div>
+        <div class="brand-title warrior-name" id="king-name"></div>
+        <div id="king-score" class="warrior-score king-score">0</div>
+        <div class="mobile-answer-note" id="king-answer-note">Menunggu jawaban...</div>
+      </div>
+      <div class="q-card">
+        <div id="round-info" class="round-info">PUTARAN 1 - DUEL 1</div>
+        <div id="timer-bar-outer"><div id="timer-bar-inner"></div></div>
+        <div id="q-text">Memuat Soal...</div>
+        <div id="opt-text"></div>
+        <div class="arena-status" id="arena-status">Raja dan Penantang menjawab melalui perangkat masing-masing.</div>
+      </div>
+      <div class="warrior-card challenger-card">
+        <div class="warrior-role">⚔️ PENANTANG</div>
+        <div class="brand-title warrior-name" id="chal-name"></div>
+        <div id="chal-score" class="warrior-score chal-score">0</div>
+        <div class="mobile-answer-note" id="chal-answer-note">Menunggu jawaban...</div>
+      </div>
+    </div>
+    <div id="next-up-wrap"><div id="next-up-title">ANTREAN BERIKUTNYA</div><div id="next-up-list"></div></div>
+  </main>
+
+  <main id="screen-player-answer" class="screen hidden player-answer-screen">
+    <div class="player-top"><span>🏛️ COLOSSEUM PAI</span><span id="player-room-small">------</span></div>
+    <div class="player-identity"><span id="player-role-icon">⚔️</span><b id="player-role-title">PENANTANG</b><strong id="player-current-name">Nama</strong></div>
+    <div class="player-question-mini" id="player-question-mini">Lihat soal pada layar utama Zoom.</div>
+    <div class="player-timer"><span id="player-time">12</span></div>
+    <div class="answer-grid">
+      <button data-answer="A">A</button><button data-answer="B">B</button><button data-answer="C">C</button><button data-answer="D">D</button>
+    </div>
+    <div id="player-answer-status" class="player-answer-status">Pilih jawaban.</div>
+  </main>
+
+  <main id="screen-final" class="screen hidden">
+    <div class="stone-panel final-panel">
+      <div id="final-content"></div>
+    </div>
+  </main>
+
+  <div id="result-overlay" class="hidden"></div>
+  <div id="alert-overlay"><div class="alert-box"><h1 id="alert-title">INFO</h1><p id="alert-message"></p><button class="btn-action" id="close-alert">KEMBALI</button></div></div>
+  <div id="confetti-container"></div>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
