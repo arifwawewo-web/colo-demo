@@ -133,7 +133,7 @@ const App = {
     this.feedbackTimer=setTimeout(()=>overlay.classList.add('hidden'),2700);
   },
   showPlayerFinal(m){this.renderFinalRanking(m.sorted||[]);this.show('screen-final');},
-  showPlayerRoulette(m){this.renderRoulette(m.players||[],m.king);$('roulette-result').textContent='MENGACAK TAKDIR...';this.show('screen-roulette');setTimeout(()=>{$('roulette-result').textContent='👑 RAJA: '+(m.king||'-')},Math.max(1200,m.duration||3500));},
+  showPlayerRoulette(m){this.renderRoulette(m.players||[],m.king);$('roulette-result').textContent='MENGACAK TAKDIR...';this.show('screen-roulette');setTimeout(()=>{$('roulette-result').textContent='👑 RAJA TERPILIH: '+(m.king||'-')},Math.max(1200,m.duration||5200));},
   showPlayerBriefing(m){this.renderBriefing(m.king,m.queue);$('brief-status').textContent='Menunggu host menekan MULAI DUEL...';$('btn-start-duel').classList.add('hidden');this.show('screen-briefing');},
   startOnlineGame(){
     if(this.hostState.players.length<2){this.alert('PESERTA BELUM CUKUP','Masukkan minimal 2 guru. Untuk uji tampilan gunakan DEMO SENDIRI.');return}
@@ -145,13 +145,28 @@ const App = {
   },
   showRoulette(){
     const s=this.hostState;this.renderRoulette(s.players,s.king);$('roulette-result').textContent='MENGACAK TAKDIR...';this.show('screen-roulette');
-    this.broadcast({type:'roulette',players:s.players,king:s.king,duration:4200});
+    this.broadcast({type:'roulette',players:s.players,king:s.king,duration:5200});
     Sound.kingChange();
-    setTimeout(()=>{Sound.victory();$('roulette-result').textContent='👑 RAJA TERPILIH: '+s.king;},3600);
-    setTimeout(()=>this.showBriefing(),4700);
+    setTimeout(()=>{Sound.victory();$('roulette-result').textContent='👑 RAJA TERPILIH: '+s.king;},4700);
+    setTimeout(()=>this.showBriefing(),5600);
   },
   renderRoulette(players,winner){
-    const strip=$('roulette-strip');if(!strip)return;const names=[];for(let i=0;i<4;i++)names.push(...players);strip.innerHTML=names.map(n=>`<span>${this.esc(n)}</span>`).join('');strip.style.transition='none';strip.style.transform='translateX(0)';void strip.offsetWidth;const winnerIndex=Math.max(0,players.indexOf(winner||this.hostState.king));const shift=-(winnerIndex+(players.length*2))*190+120;strip.style.transition='transform 4s cubic-bezier(.08,.72,.12,1)';strip.style.transform=`translateX(${shift}px)`;
+    const strip=$('roulette-strip');
+    if(!strip || !players.length)return;
+    const names=[];
+    for(let i=0;i<6;i++) names.push(...players);
+    strip.innerHTML=names.map(n=>`<span>${this.esc(n)}</span>`).join('');
+    strip.style.transition='none';
+    strip.style.transform='translateX(0)';
+    void strip.offsetWidth;
+    const winnerIndex=Math.max(0,players.indexOf(winner||this.hostState.king));
+    // Targetkan kemunculan ketiga dari nama pemenang tepat di bawah jarum tengah.
+    const targetIndex=(players.length*2)+winnerIndex;
+    const itemWidth=190;
+    const stageWidth=strip.parentElement.clientWidth || 900;
+    const shift=(stageWidth/2)-((targetIndex+0.5)*itemWidth);
+    strip.style.transition='transform 5s cubic-bezier(.08,.72,.12,1)';
+    strip.style.transform=`translateX(${shift}px)`;
   },
   showBriefing(){
     const s=this.hostState;s.phase='briefing';this.renderBriefing(s.king,s.queue);$('brief-status').textContent='Raja telah dipilih. Periksa antrean sebelum duel dimulai.';$('btn-start-duel').classList.remove('hidden');this.show('screen-briefing');this.broadcast({type:'briefing',king:s.king,queue:s.queue});
@@ -197,7 +212,7 @@ const App = {
     else if(type==='chal'){s.scores[s.chal]=(s.scores[s.chal]||0)+10;this.finishDuel(s.chal,'TAHTA DIREBUT!',s.king,'chal');}
     else{this.finishDuel(null,'DEWA KECEWA!',null,null);}
   },
-  showResult(title,roast,kicker,winner){const overlay=$('result-overlay');if(!overlay)return;overlay.innerHTML=`<div class="feedback-kicker">${this.esc(kicker||'⚔️ HASIL DUEL')}</div><div class="feedback-title">${this.esc(title)}</div>${winner?`<div class="feedback-winner">🏆 PEMENANG: ${this.esc(winner)}</div>`:''}<div class="roast-label">🔥 ROASTING</div><div class="roast-text">“${this.esc(roast||'Duel ini membuat para dewa kecewa!')}”</div>`;overlay.classList.remove('hidden');overlay.style.display='flex';overlay.style.zIndex='9999';clearTimeout(this.resultTimer);this.resultTimer=setTimeout(()=>{overlay.classList.add('hidden');overlay.style.display='none'},5000)},
+  showResult(title,roast,kicker,winner){const overlay=$('result-overlay');if(!overlay)return;clearTimeout(this.resultTimer);overlay.classList.remove('hidden');overlay.style.display='flex';overlay.style.visibility='visible';overlay.style.opacity='1';overlay.style.zIndex='99999';overlay.innerHTML=`<div class="feedback-kicker">${this.esc(kicker||'⚔️ HASIL DUEL')}</div><div class="feedback-title">${this.esc(title)}</div>${winner?`<div class="feedback-winner">🏆 PEMENANG: ${this.esc(winner)}</div>`:''}<div class="roast-label">🔥 ROASTING</div><div class="roast-text">“${this.esc(roast||'Duel ini membuat para dewa kecewa!')}”</div>`;this.resultTimer=setTimeout(()=>{overlay.classList.add('hidden');overlay.style.display='none'},5000)},
   finishGame(){
     const s=this.hostState;
     clearInterval(s.timer);
