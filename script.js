@@ -147,8 +147,8 @@ const App = {
     const s=this.hostState;this.renderRoulette(s.players,s.king);$('roulette-result').textContent='MENGACAK TAKDIR...';this.show('screen-roulette');
     this.broadcast({type:'roulette',players:s.players,king:s.king,duration:5200});
     Sound.kingChange();
-    setTimeout(()=>{Sound.victory();$('roulette-result').textContent='👑 RAJA TERPILIH: '+s.king;},4700);
-    setTimeout(()=>this.showBriefing(),5600);
+    setTimeout(()=>{Sound.victory();$('roulette-result').textContent='👑 RAJA TERPILIH: '+s.king;},6000);
+    setTimeout(()=>this.showBriefing(),9000);
   },
   renderRoulette(players,winner){
     const strip=$('roulette-strip');
